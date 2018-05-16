@@ -19,6 +19,7 @@ class Rotation(object):
     -------
     from_quaternion
     as_quaternion
+    as_dcm
     """
     def __init__(self, quat, normalized=False):
         self._single = False
@@ -84,3 +85,47 @@ class Rotation(object):
             return self._quat[0]
         else:
             return self._quat
+
+    def as_dcm(self):
+        """Return the direction cosine matrix representation of the Rotation.
+
+        This function returns a numpy.ndarray of shape (3, 3) or (N, 3, 3)
+        depending on the input that was used to initialize the object.
+        """
+
+        x = self._quat[:, 0]
+        y = self._quat[:, 1]
+        z = self._quat[:, 2]
+        w = self._quat[:, 3]
+
+        x2 = x * x
+        y2 = y * y
+        z2 = z * z
+        w2 = w * w
+
+        xy = x * y
+        zw = z * w
+        xz = x * z
+        yw = y * w
+        yz = y * z
+        xw = x * w
+
+        num_rotations = self._quat.shape[0]
+        dcm = np.empty((num_rotations, 3, 3))
+
+        dcm[:, 0, 0] = x2 - y2 - z2 + w2
+        dcm[:, 1, 0] = 2 * (xy + zw)
+        dcm[:, 2, 0] = 2 * (xz - yw)
+
+        dcm[:, 0, 1] = 2 * (xy - zw)
+        dcm[:, 1, 1] = - x2 + y2 - z2 + w2
+        dcm[:, 2, 1] = 2 * (yz + xw)
+
+        dcm[:, 0, 2] = 2 * (xz + yw)
+        dcm[:, 1, 2] = 2 * (yz - xw)
+        dcm[:, 2, 2] = - x2 - y2 + z2 + w2
+
+        if self._single:
+            return dcm[0]
+        else:
+            return dcm
