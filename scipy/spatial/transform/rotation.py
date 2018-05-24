@@ -3,6 +3,7 @@ from __future__ import division, print_function, absolute_import
 import numpy as np
 import scipy.linalg
 import warnings
+from re import compile as recompile # compile itself is a builtin function
 
 
 class Rotation(object):
@@ -281,3 +282,103 @@ class Rotation(object):
             return rotvec[0]
         else:
             return rotvec
+
+    @staticmethod
+    def _make_dcm_from_angle(char, angle, intrinsic=False):
+        sinx = np.sin(angle)
+        cosx = np.cos(angle)
+
+        axis = char.lower()
+        if axis == 'z':
+            dcm = np.array([
+                [cosx, -sinx, 0],
+                [sinx, cosx, 0],
+                [0, 0, 1]
+                ])
+        elif axis == 'y':
+            dcm = np.array([
+                [cosx, 0, sinx],
+                [0, 1, 0],
+                [-sinx, 0, cosx]
+                ])
+        elif axis == 'x':
+            dcm = np.array([
+                [1, 0, 0],
+                [0, cosx, -sinx],
+                [0, sinx, cosx]
+                ])
+
+        return dcm.transpose() if intrinsic else dcm
+
+    @classmethod
+    def _make_dcm_from_euler(cls, axis_str, angle):
+        print(axis_str)
+        extrinsic = recompile("^[xyz]{1,3}$")
+        intrinsic = recompile("^[XYZ]{1,3}$")
+
+        if len(axis_str) != angle.shape[0]:
+            raise ValueError("Number of axes specified in {0} does not match "
+                             "number of angles given in {1}".format(axis_str,
+                                 angle))
+        if ((extrinsic.match(axis_str) is None) and
+            (intrinsic.match(axis_str) is None)):
+               raise ValueError("Cannot allow mixing of intrinsic and "
+                                "extrinsic rotations in sequence {}".format(
+                                    axis_str))
+
+        dcm = np.eye(3)
+        if extrinsic.match(axis_str) is not None:
+            # Build dcm with pre-multiplication
+            for ind, char in enumerate(axis_str):
+                dcm = np.einsum('...ij,...jk->...ik',
+                        cls._make_dcm_from_angle(char, angle[ind], False), dcm)
+        elif intrinsic.match(axis_str) is not None:
+            # Build dcm with post multiplication
+            for ind, char in enumerate(axis_str):
+                dcm = np.einsum('...ij,...ik->...ik', dcm,
+                        cls._make_dcm_from_angle(char, angle[ind], True))
+
+
+    @classmethod
+    def from_euler(cls, seq, angle_matrix, deg=False):
+        """Initialize rotation from Euler angles.
+
+        Parameters
+        ----------
+        seq : str or array of str
+            Each str[i] (or str itself) must be a string of upto 3 characters
+            belonging to the set {'x', 'y', 'z'} or {'X', 'Y', 'Z'}. Each
+            lowercase character represents an extrinsic rotation around the
+            corresponding axis and an uppercase character represents an
+            intrinsic rotation. Extrinsic and intrinsic rotations cannot be
+            mixed in one function call. Its length must match that of the
+            `angles` parameter.
+        angle_matrix : array_like, shape ([1 or 2 or 3], ) or (N, 3)
+            Euler angles specified in radians (`deg` is False) or degrees if
+            parameter `deg` is True. Each `angles[i]` corresponds to an array
+            of angles matching the number of axes specified.
+        deg : boolean
+            If True, then the given angles are taken to be in degrees
+        """
+        is_single = False
+        seq = np.asarray(seq, dtype=str)
+        angle_matrix = np.asarray(angle_matrix, dtype=float)
+        if deg:
+            angle_matrix = np.deg2rad(angle_matrix)
+
+        if seq.shape == (1, ) and angle_matrix.shape == (len(seq[0]), ):
+            is_single = True
+            angle_matrix = angle_matrix[None, :]
+        elif (seq.shape[0] != angle_matrix.shape[0] or
+             angle_matrix.shape[1] != 3):
+            raise ValueError("Shape mismatch between seq {0} and "
+                             "angles {1}".format(seq.shape, angles.shape))
+
+        num_rotations = seq.shape[0]
+        dcm_set = np.empty((num_rotations, 3, 3))
+
+        for rot_num, axes in enumerate(seq):
+            dcm_set[rot_num] = cls._make_dcm_from_euler(axes,
+                    angle_matrix[rot_num])
+
+        return cls.from_dcm(dcm_set[0] if is_single else dcm_set)
