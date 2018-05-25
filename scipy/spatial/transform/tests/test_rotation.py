@@ -63,7 +63,7 @@ def test_zero_norms_from_quaternion():
             [5, 0, 12, 0]
             ])
     with pytest.raises(ValueError):
-        r = Rotation.from_quaternion(x)
+        Rotation.from_quaternion(x)
 
 
 def test_as_dcm_single_1d_quaternion():
