@@ -317,13 +317,9 @@ def test_rotvec_calc_pipeline():
 
 
 def test_from_euler_single_rotation():
-    dcm = Rotation.from_euler('z', 90, degrees=True).as_dcm()
-    expected_dcm = np.array([
-        [0, -1, 0],
-        [1, 0, 0],
-        [0, 0, 1]
-    ])
-    assert_allclose(dcm, expected_dcm)
+    quat = Rotation.from_euler('z', 90, degrees=True).as_quaternion()
+    expected_quat = np.array([0, 0, 1, 1]) / np.sqrt(2)
+    assert_allclose(quat, expected_quat)
 
 
 def test_single_intrinsic_extrinsic_rotation():
