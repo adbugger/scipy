@@ -23,6 +23,7 @@ class Rotation(object):
     as_dcm
     from_rotvec
     as_rotvec
+    from_euler
     """
     def __init__(self, quat, normalized=False):
         self._single = False
@@ -340,56 +341,69 @@ class Rotation(object):
         return dcm
 
     @classmethod
-    def from_euler(cls, seq, angle_mat, deg=False):
+    def from_euler(cls, seq, angles, degrees=False):
         """Initialize rotation from Euler angles.
 
         Parameters
         ----------
-        seq : str or array of str
-            Each str[i] (or str itself) must be a string of upto 3 characters
-            belonging to the set {'x', 'y', 'z'} or {'X', 'Y', 'Z'}. Each
-            lowercase character represents an extrinsic rotation around the
-            corresponding axis and an uppercase character represents an
-            intrinsic rotation. Extrinsic and intrinsic rotations cannot be
-            mixed in one function call. Its length must match that of the
-            `angles` parameter.
-        angle_mat : array_like, shape ([1 or 2 or 3], ) or (N, 3)
-            Euler angles specified in radians (`deg` is False) or degrees if
-            parameter `deg` is True. Each `angles[i]` corresponds to an array
-            of angles matching the number of axes specified.
-        deg : boolean
+        seq : str
+            `seq` must be a string of upto 3 characters belonging to the set
+            {'x', 'y', 'z'} or {'X', 'Y', 'Z'}. Each lowercase character
+            represents an extrinsic rotation around the corresponding axis and
+            an uppercase character represents an intrinsic rotation. Extrinsic
+            and intrinsic rotations cannot be mixed in one function call.
+        angles : float or array_like, shape (N, ) or (N, [1 or 2 or 3])
+            Euler angles specified in radians (`degrees` is False) or degrees
+            if parameter `degrees` is True.
+            For a single character `seq`, `angles` can be:
+
+                - a single value
+                - array_like, 1D with shape (N, ), where each `angle[i]`
+                  corresponds to a single rotation
+                - array_like, 2D with shape (N, 1), where each `angle[i, 0]`
+                  corresponds to a single rotation
+
+            For 2- and 3-character wide `seq`, `angles` can be:
+
+                - array_like, 1D with shape (W, ) where `W` is the width of
+                  `seq`, which corresponds to a single rotation with `W` axes
+                - array_like, 2D with shape (N, W) with each `angle[i]`
+                  corresponding to a sequence of Euler angles describing a
+                  single rotation
+
+        degrees : boolean
             If True, then the given angles are taken to be in degrees
         """
-        angle_mat = np.asarray(angle_mat, dtype=float)
-        if deg:
-            angle_mat = np.deg2rad(angle_mat)
+        angles = np.asarray(angles, dtype=float)
+        if degrees:
+            angles = np.deg2rad(angles)
 
         if type(seq) is str:
             # The single rotation case. For this case, we can have up to 3 axes
-            if len(seq) != angle_mat.shape[0] or angle_mat.ndim != 1:
+            if len(seq) != angles.shape[0] or angles.ndim != 1:
                 raise ValueError("Invalid axis sequence {0} for angles "
-                                 "specified {1}".format(seq, angle_mat))
+                                 "specified {1}".format(seq, angles))
 
-            return cls.from_dcm(cls._make_dcm_from_euler(seq, angle_mat))
+            return cls.from_dcm(cls._make_dcm_from_euler(seq, angles))
 
         # seq is a list of strings which we convert to numpy array
         seq = np.asarray(seq, dtype=str)
 
-        if seq.shape[0] != angle_mat.shape[0]:
+        if seq.shape[0] != angles.shape[0]:
             raise ValueError("Number of axis sequences specified ({0}) does "
                              "match number of angle sequences "
                              "specified".format(seq.shape[0],
-                                                angle_mat.shape[0]))
+                                                angles.shape[0]))
 
-        if angle_mat.ndim != 2 or angle_mat.shape[-1] != 3:
+        if angles.ndim != 2 or angles.shape[-1] != 3:
             raise ValueError("For multiple rotations, expected 3 angles per "
-                             "sequence, got {}".format(angle_mat.shape[-1]))
+                             "sequence, got {}".format(angles.shape[-1]))
 
         num_rotations = seq.shape[0]
         dcm_set = np.empty((num_rotations, 3, 3))
 
         for rot_num, axes in enumerate(seq):
             dcm_set[rot_num] = cls._make_dcm_from_euler(axes,
-                                                        angle_mat[rot_num])
+                                                        angles[rot_num])
 
         return cls.from_dcm(dcm_set)
