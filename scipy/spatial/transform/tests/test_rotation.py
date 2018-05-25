@@ -314,3 +314,19 @@ def test_rotvec_calc_pipeline():
         [-3e-4, 3.5e-4, 7.5e-5]
         ])
     assert_allclose(Rotation.from_rotvec(rotvec).as_rotvec(), rotvec)
+
+
+def test_from_euler_single_rotation():
+    dcm = Rotation.from_euler('z', 90, degrees=True).as_dcm()
+    expected_dcm = np.array([
+        [0, -1, 0],
+        [1, 0, 0],
+        [0, 0, 1]
+    ])
+    assert_allclose(dcm, expected_dcm)
+
+
+def test_single_intrinsic_extrinsic_rotation():
+    ext = Rotation.from_euler('z', 90, degrees=True).as_dcm()
+    int = Rotation.from_euler('Z', 90, degrees=True).as_dcm()
+    assert_allclose(ext, int)
