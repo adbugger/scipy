@@ -283,62 +283,67 @@ class Rotation(object):
         else:
             return rotvec
 
-    @staticmethod
-    def _make_dcm_from_angle(char, angle, intrinsic=False):
-        sinx = np.sin(angle)
-        cosx = np.cos(angle)
+    @classmethod
+    def _make_elementary_quat(cls, char, angles):
+        if len(char) != 1:
+            raise ValueError("This function computes elementary rotation "
+                             "quaternions about a single axis. Expected "
+                             "argument 1 to be a single character, got "
+                             "{}.".format(char))
 
-        axis = char.lower()
-        if axis == 'z':
-            dcm = np.array([
-                [cosx, -sinx, 0],
-                [sinx, cosx, 0],
-                [0, 0, 1]
-                ])
-        elif axis == 'y':
-            dcm = np.array([
-                [cosx, 0, sinx],
-                [0, 1, 0],
-                [-sinx, 0, cosx]
-                ])
-        elif axis == 'x':
-            dcm = np.array([
-                [1, 0, 0],
-                [0, cosx, -sinx],
-                [0, sinx, cosx]
-                ])
+        if angles.ndim != 1:
+            raise ValueError("This function computes elementary rotation "
+                             "quaternions about a single axis. Expected "
+                             "argument `angles` to have dimension 1, got "
+                             "{}.".format(angles))
 
-        return dcm.transpose() if intrinsic else dcm
+        num_rotations = angles.shape[0]
+        quat = np.zeros((num_rotations, 4))
+
+        char_to_ind = {'x': 0, 'y': 1, 'z': 2}
+        quat[:, 3] = np.cos(angles / 2)
+        quat[:, char_to_ind[char]] = np.sin(angles / 2)
+        return quat
 
     @classmethod
-    def _make_dcm_from_euler(cls, axis_str, angle):
-        extrinsic = recompile("^[xyz]{1,3}$")
-        intrinsic = recompile("^[XYZ]{1,3}$")
+    def _compose_quat(cls, p, q):
+        # p and q should have same shape (N, 4)
+        if p.shape != q.shape:
+            raise ValueError("Expected same shape for input quaternions, "
+                             "got {0} and {1}".format(p.shape, q.shape))
 
-        if len(axis_str) != angle.shape[0]:
-            raise ValueError("Number of axes specified in {0} does not match "
-                             "number of angles given in {1}".format(axis_str,
-                                                                    angle))
-        if ((extrinsic.match(axis_str) is None) and
-                (intrinsic.match(axis_str) is None)):
-                raise ValueError("Cannot allow mixing of intrinsic and "
-                                 "extrinsic rotations in sequence {}".format(
-                                    axis_str))
+        num_quat = p.shape[0]
+        product = np.empty((num_quat, 4))
+        product[:, 0] = (p[:, 3] * q[:, 0] + p[:, 0] * q[:, 3] +
+                         p[:, 1] * q[:, 2] + p[:, 2] * q[:, 1])
+        product[:, 1] = (p[:, 3] * q[:, 1] - p[:, 0] * q[:, 2] +
+                         p[:, 1] * q[:, 3] + p[:, 2] * q[:, 0])
+        product[:, 2] = (p[:, 3] * q[:, 2] + p[:, 0] * q[:, 1] -
+                         p[:, 1] * q[:, 0] + p[:, 2] * q[:, 3])
+        product[:, 3] = (p[:, 3] * q[:, 3] - p[:, 0] * q[:, 0] -
+                         p[:, 1] * q[:, 1] + p[:, 2] * q[:, 2])
 
-        dcm = np.eye(3)
-        if extrinsic.match(axis_str) is not None:
-            # Build dcm with pre-multiplication
-            for ind, char in enumerate(axis_str):
-                dcm = np.einsum('...ij,...jk->...ik',
-                                cls._make_dcm_from_angle(char, angle[ind],
-                                                         False), dcm)
-        elif intrinsic.match(axis_str) is not None:
-            # Build dcm with post multiplication
-            for ind, char in enumerate(axis_str):
-                dcm = np.einsum('...ij,...ik->...ik', dcm,
-                                cls._make_dcm_from_angle(char, angle[ind],
-                                                         True))
-        return dcm
+        return product
+
+    @classmethod
+    def _elementary_quat_compose(cls, seq, angles, intrinsic=False):
+        seq = seq.lower()
+        num_rotations = angles.shape[0]
+        quat = np.empty((num_rotations, 4, len(seq)))
+
+        for idx, axis in enumerate(seq):
+            quat[:, :, idx] = cls._make_elementary_quat(axis, angles[:, idx])
+
+        # Initialize result to identity quaternions
+        result = np.zeros((num_rotations, 4))
+        result[:, 3] = 1
+
+        for idx in range(len(seq)):
+            if intrinsic:
+                result = cls._compose_quat(quat[:, :, idx], result)
+            else:
+                result = cls._compose_quat(result, quat[:, :, idx])
+        return result
 
     @classmethod
     def from_euler(cls, seq, angles, degrees=False):
@@ -374,36 +379,50 @@ class Rotation(object):
         degrees : boolean
             If True, then the given angles are taken to be in degrees
         """
+
+        if len(seq) < 1 or len(seq) > 3:
+            raise ValueError("Expected axis specification to be a non-empty "
+                             "string of upto 3 characters, got {}".format(seq))
+
+        if ((len(seq) == 2 and seq[0] == seq[1]) or
+                (len(seq) == 3 and (seq[0] == seq[1] or seq[1] == seq[2]))):
+            raise ValueError("Expected consecutive axes to be different, "
+                             "got {}".format(seq))
+
+        intrinsic = (recompile('^[XYZ]{1,3}$').match(seq) is not None)
+        extrinsic = (recompile('^[xyz]{1,3}$').match(seq) is not None)
+        if not (intrinsic or extrinsic):
+            raise ValueError("Expected either intrinsic or extrinsic rotations"
+                             " , got {}".format(seq))
+
         angles = np.asarray(angles, dtype=float)
         if degrees:
             angles = np.deg2rad(angles)
 
-        if type(seq) is str:
-            # The single rotation case. For this case, we can have up to 3 axes
-            if len(seq) != angles.shape[0] or angles.ndim != 1:
-                raise ValueError("Invalid axis sequence {0} for angles "
-                                 "specified {1}".format(seq, angles))
+        is_single = False
+        if len(seq) == 1:
+            # For single axis, intrinsic and extrinsic rotations are same
+            seq = seq.lower()
+            if angles.ndim == 0:
+                # Single value case
+                quat = cls._make_elementary_quat(seq, angles.reshape((1)))
+                is_single = True
+            elif angles.ndim == 1:
+                quat = cls._make_elementary_quat(seq, angles)
+            else:
+                raise ValueError("Expected 1D or 2D `angles` parameter for a"
+                                 "single character `seq`, "
+                                 "got shape {}".format(angles.shape))
+        else:  # 2 or 3 axes
+            if len(seq) != angles.shape[-1]:
+                raise ValueError("Expected each angle sequence to have width "
+                                 "{0}, got {1}".format(len(seq),
+                                                       angles.shape[-1]))
+            if angles.ndim == 1:
+                is_single = True
+                quat = cls._elementary_quat_compose(seq, angles[None, :],
+                                                    intrinsic)
+            elif angles.ndim == 2:
+                quat = cls._elementary_quat_compose(seq, angles, intrinsic)
 
-            return cls.from_dcm(cls._make_dcm_from_euler(seq, angles))
-
-        # seq is a list of strings which we convert to numpy array
-        seq = np.asarray(seq, dtype=str)
-
-        if seq.shape[0] != angles.shape[0]:
-            raise ValueError("Number of axis sequences specified ({0}) does "
-                             "match number of angle sequences "
-                             "specified".format(seq.shape[0],
-                                                angles.shape[0]))
-
-        if angles.ndim != 2 or angles.shape[-1] != 3:
-            raise ValueError("For multiple rotations, expected 3 angles per "
-                             "sequence, got {}".format(angles.shape[-1]))
-
-        num_rotations = seq.shape[0]
-        dcm_set = np.empty((num_rotations, 3, 3))
-
-        for rot_num, axes in enumerate(seq):
-            dcm_set[rot_num] = cls._make_dcm_from_euler(axes,
-                                                        angles[rot_num])
-
-        return cls.from_dcm(dcm_set)
+        return cls(quat[0] if is_single else quat)
