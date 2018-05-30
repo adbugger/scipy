@@ -512,7 +512,9 @@ class Rotation(object):
         """Return the Euler angles representation of the Rotation.
 
         This function returns a numpy.ndarray of shape (N, 3) or (3,) depending
-        on how the object was initialized.
+        on how the object was initialized. The algorithm presented in [2]_ has
+        been adapted for our use to extract Euler angles, keeping in mind the
+        conventions presented in [3]_.
 
         Parameters
         ----------
@@ -531,6 +533,11 @@ class Rotation(object):
         ----------
         .. [1] `Euler angle definitions
                 <https://en.wikipedia.org/wiki/Euler_angles#Definition_by_intrinsic_rotations>`_
+        .. [2] Malcolm D. Shuster, F. Landis Markley
+                `General Formula for Euler Angles
+                <https://arc.aiaa.org/doi/abs/10.2514/1.16622>`_
+        .. [3] Malcolm D. Shuster `A Survey of Attitude Representations
+                <https://www.researchgate.net/publication/253512057_A_Survey_of_Attitude_Representations>`_
         """
         if len(seq) != 3:
             raise ValueError("Expected 3 axes, got {}.".format(seq))
