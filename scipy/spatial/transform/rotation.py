@@ -14,11 +14,14 @@ def _elementary_basis_vector(char):
     return b
 
 
-def _make_euler_from_dcm(dcm, seq, intrinsic=False):
-    # The algorithm assumes extrinsic frame transformations. Their dcms are
-    # transpose of what we return. Adapt the algorithm for our case by taking
-    # the additive inverse of each returned angle.
-    # For intrinsic rotations, we simple reverse the order of the angles
+def _make_euler_from_dcm(dcm, seq, extrinsic=False):
+    # The algorithm assumes intrinsic frame transformations. Their
+    # ELEMENTARY dcms are transpose of what we return.
+    # Adapt the algorithm for our case by
+    # 1. Transposing our dcm representation
+    # 2. Reversing both axis sequence and angles for extrinsic rotations
+
+    seq = seq[::-1] if extrinsic else seq
 
     if dcm.ndim == 2:
         dcm = dcm[None, :, :]
@@ -48,12 +51,13 @@ def _make_euler_from_dcm(dcm, seq, intrinsic=False):
         [0, sl, cl]
     ])
     rtc = rt.dot(c)
+    ct = c.T
     o = np.empty_like(dcm)
     for ind in range(num_rotations):
-        o[ind] = rtc.dot(dcm[ind]).dot(c.T)
+        o[ind] = rtc.dot(dcm[ind]).dot(ct)
 
     # Step 4
-    angle2 = lamb + o[:, 2, 2]
+    angle2 = lamb + np.arccos(o[:, 2, 2])
 
     # Steps 5, 6
     eps = np.finfo(float).resolution  # ~1e-15
@@ -64,7 +68,7 @@ def _make_euler_from_dcm(dcm, seq, intrinsic=False):
     angle3 = np.empty(num_rotations)
 
     # 5b
-    safe_mask = safe1 and safe2
+    safe_mask = np.logical_and(safe1, safe2)
     angle1[safe_mask] = np.arctan2(o[safe_mask, 2, 0], -o[safe_mask, 2, 1])
     angle3[safe_mask] = np.arctan2(o[safe_mask, 0, 2], o[safe_mask, 1, 2])
 
@@ -78,15 +82,17 @@ def _make_euler_from_dcm(dcm, seq, intrinsic=False):
                                 o[~safe2, 0, 0] - o[~safe2, 1, 1])
 
     # Step 7
-    # TODO: possbily adjust angles?
+    # python modulo operator works correctly for negative numbers
+    adjust_mask = np.logical_or(angle2 < 0, angle2 > np.pi)
+    angle1[adjust_mask] = (angle1[adjust_mask] + np.pi) % (2 * np.pi)
+    angle2[adjust_mask] = (2 * lamb - angle2[adjust_mask]) % (2 * np.pi)
+    angle3[adjust_mask] = (angle3[adjust_mask] - np.pi) % (2 * np.pi)
 
     # Step 8
     # TODO: if any observability flags are poor, possibly raise a UserWarning?
 
-    angle1 *= -1
-    angle2 *= -1
-    angle3 *= -1
-    return np.column_stack((angle3, angle2, angle1) if intrinsic else
+    # Reverse role of extrinsic and intrinsic rotations
+    return np.column_stack((angle3, angle2, angle1) if extrinsic else
                            (angle1, angle2, angle3))
 
 
@@ -519,7 +525,12 @@ class Rotation(object):
 
         degrees : boolean, optional
             Returned angles are in degrees if this flag is True, else they are
-            in radians.
+            in radians. Default is False.
+
+        References
+        ----------
+        .. [1] `Euler angle definitions
+                <https://en.wikipedia.org/wiki/Euler_angles#Definition_by_intrinsic_rotations>`_
         """
         if len(seq) != 3:
             raise ValueError("Expected 3 axes, got {}.".format(seq))
@@ -536,7 +547,7 @@ class Rotation(object):
 
         seq = seq.lower()
 
-        angles = _make_euler_from_dcm(self.as_dcm(), seq, intrinsic)
+        angles = _make_euler_from_dcm(self.as_dcm(), seq, extrinsic)
         if degrees:
             angles = np.rad2deg(angles)
 
