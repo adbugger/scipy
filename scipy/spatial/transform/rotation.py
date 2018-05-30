@@ -8,6 +8,88 @@ import re
 AXIS_TO_IND = {'x': 0, 'y': 1, 'z': 2}
 
 
+def _elementary_basis_vector(char):
+    b = np.zeros(3)
+    b[AXIS_TO_IND[char]] = 1
+    return b
+
+
+def _make_euler_from_dcm(dcm, seq, intrinsic=False):
+    # The algorithm assumes extrinsic frame transformations. Their dcms are
+    # transpose of what we return. Adapt the algorithm for our case by taking
+    # the additive inverse of each returned angle.
+    # For intrinsic rotations, we simple reverse the order of the angles
+
+    if dcm.ndim == 2:
+        dcm = dcm[None, :, :]
+    num_rotations = dcm.shape[0]
+
+    # Step 0
+    # Algorithms dcms are transpose of ours
+    dcm = np.transpose(dcm, (0, 2, 1))
+    # Algorithm assumes axes as column vectors, here we use 1D vectors
+    n1 = _elementary_basis_vector(seq[0])
+    n2 = _elementary_basis_vector(seq[1])
+    n3 = _elementary_basis_vector(seq[2])
+
+    # Step 2
+    lamb = np.arctan2(np.dot(np.cross(n1, n2), n3), np.dot(n1, n3))
+    c = np.empty((3, 3))
+    c[0] = n2
+    c[1] = np.cross(n1, n2)
+    c[2] = n1
+
+    # Step 3
+    cl = np.cos(lamb)
+    sl = np.sin(lamb)
+    rt = np.array([
+        [1, 0, 0],
+        [0, cl, -sl],
+        [0, sl, cl]
+    ])
+    rtc = rt.dot(c)
+    o = np.empty_like(dcm)
+    for ind in range(num_rotations):
+        o[ind] = rtc.dot(dcm[ind]).dot(c.T)
+
+    # Step 4
+    angle2 = lamb + o[:, 2, 2]
+
+    # Steps 5, 6
+    eps = np.finfo(float).resolution  # ~1e-15
+    safe1 = (np.abs(angle2 - lamb) >= eps)
+    safe2 = (np.abs(angle2 - lamb - np.pi) >= eps)
+
+    angle1 = np.empty(num_rotations)
+    angle3 = np.empty(num_rotations)
+
+    # 5b
+    safe_mask = safe1 and safe2
+    angle1[safe_mask] = np.arctan2(o[safe_mask, 2, 0], -o[safe_mask, 2, 1])
+    angle3[safe_mask] = np.arctan2(o[safe_mask, 0, 2], o[safe_mask, 1, 2])
+
+    # 6a
+    angle3[~safe_mask] = 0
+    # 6b
+    angle1[~safe1] = np.arctan2(o[~safe1, 0, 1] - o[~safe1, 1, 0],
+                                o[~safe1, 0, 0] + o[~safe1, 1, 1])
+    # 6c
+    angle1[~safe2] = np.arctan2(o[~safe2, 0, 1] + o[~safe2, 1, 0],
+                                o[~safe2, 0, 0] - o[~safe2, 1, 1])
+
+    # Step 7
+    # TODO: possbily adjust angles?
+
+    # Step 8
+    # TODO: if any observability flags are poor, possibly raise a UserWarning?
+
+    angle1 *= -1
+    angle2 *= -1
+    angle3 *= -1
+    return np.column_stack((angle3, angle2, angle1) if intrinsic else
+                           (angle1, angle2, angle3))
+
+
 def _make_elementary_quat(axis, angles):
     num_rotations = angles.shape[0]
     quat = np.zeros((num_rotations, 4))
@@ -419,3 +501,43 @@ class Rotation(object):
 
         quat = _elementary_quat_compose(seq, angles, intrinsic)
         return cls(quat[0] if is_single else quat, normalized=True)
+
+    def as_euler(self, seq, degrees=False):
+        """Return the Euler angles representation of the Rotation.
+
+        This function returns a numpy.ndarray of shape (N, 3) or (3,) depending
+        on how the object was initialized.
+
+        Parameters
+        ----------
+        seq : string, length 3
+            3 characters belonging to the set {'X', 'Y', 'Z'} for intrinsic
+            rotations, or {'x', 'y', 'z'} for extrinsic rotations [1]_.
+            Adjacent axes cannot be the same.
+            Extrinsic and intrinsic rotations cannot be mixed in one function
+            call.
+
+        degrees : boolean, optional
+            Returned angles are in degrees if this flag is True, else they are
+            in radians.
+        """
+        if len(seq) != 3:
+            raise ValueError("Expected 3 axes, got {}.".format(seq))
+
+        intrinsic = (re.compile('^[XYZ]{1,3}$').match(seq) is not None)
+        extrinsic = (re.compile('^[xyz]{1,3}$').match(seq) is not None)
+        if not (intrinsic or extrinsic):
+            raise ValueError("Expected axes from `seq` to be from ['x', 'y', "
+                             "'z'] or ['X', 'Y', 'Z'], got {}".format(seq))
+
+        if any(seq[i] == seq[i+1] for i in range(2)):
+            raise ValueError("Expected consecutive axes to be different, "
+                             "got {}".format(seq))
+
+        seq = seq.lower()
+
+        angles = _make_euler_from_dcm(self.as_dcm(), seq, intrinsic)
+        if degrees:
+            angles = np.rad2deg(angles)
+
+        return angles[0] if self._single else angles
