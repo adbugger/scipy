@@ -60,8 +60,8 @@ def compute_euler_from_dcm(dcm, seq, extrinsic=False):
     rtc = rt.dot(c)
     ct = c.T
     o = np.empty_like(dcm)
-    res = np.einsum('ij,...jk->...ik', rtc, dcm)
-    o = np.einsum('...ij,jk->...ik', res, ct)
+    res = np.einsum('...ij,...jk->...ik', rtc, dcm)
+    o = np.einsum('...ij,...jk->...ik', res, ct)
 
     # Step 4
     angle2 = lamb + np.arccos(o[:, 2, 2])
@@ -158,6 +158,7 @@ class Rotation(object):
     from_rotvec
     as_rotvec
     from_euler
+    as_euler
     """
     def __init__(self, quat, normalized=False):
         self._single = False
