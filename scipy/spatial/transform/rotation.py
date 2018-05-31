@@ -15,8 +15,9 @@ def elementary_basis_vector(axis):
 
 
 def compute_euler_from_dcm(dcm, seq, extrinsic=False):
-    # The algorithm assumes intrinsic frame transformations. Their
-    # ELEMENTARY dcms are transpose of what we return.
+    # The algorithm assumes intrinsic frame transformations. For representation
+    # the paper uses transformation matrices, which are transpose of the
+    # direction cosine matrices used by our Rotation class.
     # Adapt the algorithm for our case by
     # 1. Transposing our dcm representation
     # 2. Reversing both axis sequence and angles for extrinsic rotations
