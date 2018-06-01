@@ -88,7 +88,11 @@ def compute_euler_from_dcm(dcm, seq, extrinsic=False):
 
     # Step 7
     # python modulo operator works correctly for negative numbers
-    adjust_mask = np.logical_or(angle2 < 0, angle2 > np.pi)
+    if seq[0] == seq[2]:
+        # lambda = 0, so we can only ensure angle2 -> [0, pi]
+        adjust_mask = np.logical_or(angle2 < 0, angle2 > np.pi)
+    else:
+        adjust_mask = np.logical_or(angle2 < -np.pi / 2, angle2 > np.pi / 2)
     angle1[adjust_mask] = angle1[adjust_mask] + np.pi
     angle2[adjust_mask] = 2 * phi - angle2[adjust_mask]
     angle3[adjust_mask] = angle3[adjust_mask] - np.pi
