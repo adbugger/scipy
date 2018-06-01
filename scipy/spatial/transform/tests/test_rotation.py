@@ -7,6 +7,7 @@ from numpy.testing import assert_equal, assert_array_almost_equal
 from numpy.testing import assert_allclose
 from scipy.spatial.transform import Rotation
 from scipy.stats import special_ortho_group
+from itertools import permutations
 
 
 def test_generic_quat_matrix():
@@ -459,53 +460,59 @@ def test_from_euler_extrinsic_rotation_313():
 
 def test_as_euler_extrinsic_rotation():
     np.random.seed(0)
-    angles = np.random.uniform(low=-np.pi, high=np.pi, size=(6, 3))
-    rotation = Rotation.from_euler('zxy', angles)
+    n = 10
+    angle1 = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
+    angle3 = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
+    # We can enforce different range restrictions on angle2 for different cases
+    angle2_pi = np.random.uniform(low=0, high=np.pi, size=(n,))
+    angle2_pi_2 = np.random.uniform(low=-np.pi / 2, high=np.pi / 2, size=(n,))
 
-    angle_estimates = rotation.as_euler('zxy')
-    estimated = Rotation.from_euler('zxy', angle_estimates)
+    # All axes unique
+    angles_diff_axes = np.column_stack((angle1, angle2_pi_2, angle3))
+    for seq_tuple in permutations('xyz'):
+        seq = ''.join(seq_tuple)
+        assert_allclose(
+            angles_diff_axes,
+            Rotation.from_euler(
+                seq, angles_diff_axes).as_euler(seq)
+        )
 
-    assert_array_almost_equal(rotation.as_dcm(), estimated.as_dcm())
+    # First and last axes same
+    angles_same_axes = np.column_stack((angle1, angle2_pi, angle3))
+    for se_tuple in permutations('xyz', 2):
+        # First and last axes are same
+        seq = ''.join(se_tuple) + se_tuple[0]
+        assert_allclose(
+            angles_same_axes,
+            Rotation.from_euler(
+                seq, angles_same_axes).as_euler(seq))
 
 
 def test_as_euler_intrinsic_rotation():
     np.random.seed(0)
-    angles = np.random.uniform(low=-np.pi, high=np.pi, size=(6, 3))
-    rot = Rotation.from_euler('ZXY', angles)
+    n = 10
+    angle1 = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
+    angle3 = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
+    # We can enforce different range restrictions on angle2 for different cases
+    angle2_pi = np.random.uniform(low=0, high=np.pi, size=(n,))
+    angle2_pi_2 = np.random.uniform(low=-np.pi / 2, high=np.pi / 2, size=(n,))
 
-    estimates = rot.as_euler('ZXY')
-    est_obj = Rotation.from_euler('ZXY', estimates)
+    # All axes unique
+    angles_diff_axes = np.column_stack((angle1, angle2_pi_2, angle3))
+    for seq_tuple in permutations('XYZ'):
+        seq = ''.join(seq_tuple)
+        assert_allclose(
+            angles_diff_axes,
+            Rotation.from_euler(
+                seq, angles_diff_axes).as_euler(seq)
+        )
 
-    assert_array_almost_equal(rot.as_dcm(), est_obj.as_dcm())
-
-
-def test_as_euler_extrinsic_rotation_312():
-    angles = [
-        [45, 30, 60],
-        [30, 60, 15],
-        [35, 20, 65],
-        [25, 45, 20],
-        [45, 30, 20],
-        # [25, 135, 35] -> [-155.,   45., -145.]
-        # In this last case, these are the angles returned by the algorithm
-        # without any adjustment. It looks like we cannot always expect to get
-        # back the original angles. However, the rotation that is represented
-        # is the same.
-        ]
-    estimates = Rotation.from_euler(
-        'zxy', angles, degrees=True).as_euler('zxy', degrees=True)
-    assert_allclose(angles, estimates)
-
-
-def test_as_euler_extrinsic_rotation_313():
-    angles = [
-        [45, 30, 60],
-        [30, 60, 15],
-        [35, 20, 65],
-        [25, 45, 20],
-        [45, 30, 20],
-        [25, 135, 35],
-        ]
-    estimates = Rotation.from_euler(
-        'zxz', angles, degrees=True).as_euler('zxz', degrees=True)
-    assert_allclose(angles, estimates)
+    # First and last axes same
+    angles_same_axes = np.column_stack((angle1, angle2_pi, angle3))
+    for se_tuple in permutations('XYZ', 2):
+        # First and last axes are same
+        seq = ''.join(se_tuple) + se_tuple[0]
+        assert_allclose(
+            angles_same_axes,
+            Rotation.from_euler(
+                seq, angles_same_axes).as_euler(seq))
