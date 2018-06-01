@@ -458,61 +458,40 @@ def test_from_euler_extrinsic_rotation_313():
     ]))
 
 
-def test_as_euler_extrinsic_rotation():
+def test_as_euler_asymmetric_axes():
     np.random.seed(0)
     n = 10
-    angle1 = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
-    angle3 = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
-    # We can enforce different range restrictions on angle2 for different cases
-    angle2_pi = np.random.uniform(low=0, high=np.pi, size=(n,))
-    angle2_pi_2 = np.random.uniform(low=-np.pi / 2, high=np.pi / 2, size=(n,))
+    angles = np.empty((n, 3))
+    angles[:, 0] = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
+    angles[:, 1] = np.random.uniform(low=-np.pi / 2, high=np.pi / 2, size=(n,))
+    angles[:, 2] = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
 
-    # All axes unique
-    angles_diff_axes = np.column_stack((angle1, angle2_pi_2, angle3))
     for seq_tuple in permutations('xyz'):
+        # Extrinsic rotations
         seq = ''.join(seq_tuple)
-        assert_allclose(
-            angles_diff_axes,
-            Rotation.from_euler(
-                seq, angles_diff_axes).as_euler(seq)
-        )
-
-    # First and last axes same
-    angles_same_axes = np.column_stack((angle1, angle2_pi, angle3))
-    for se_tuple in permutations('xyz', 2):
-        # First and last axes are same
-        seq = ''.join(se_tuple) + se_tuple[0]
-        assert_allclose(
-            angles_same_axes,
-            Rotation.from_euler(
-                seq, angles_same_axes).as_euler(seq))
+        assert_allclose(angles, Rotation.from_euler(seq, angles).as_euler(seq))
+        # Intrinsic rotations
+        seq = seq.upper()
+        assert_allclose(angles, Rotation.from_euler(seq, angles).as_euler(seq))
 
 
-def test_as_euler_intrinsic_rotation():
+def test_as_euler_symmetric_axes():
     np.random.seed(0)
     n = 10
-    angle1 = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
-    angle3 = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
-    # We can enforce different range restrictions on angle2 for different cases
-    angle2_pi = np.random.uniform(low=0, high=np.pi, size=(n,))
-    angle2_pi_2 = np.random.uniform(low=-np.pi / 2, high=np.pi / 2, size=(n,))
+    angles = np.empty((n, 3))
+    angles[:, 0] = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
+    angles[:, 1] = np.random.uniform(low=0, high=np.pi, size=(n,))
+    angles[:, 2] = np.random.uniform(low=-np.pi, high=np.pi, size=(n,))
 
-    # All axes unique
-    angles_diff_axes = np.column_stack((angle1, angle2_pi_2, angle3))
-    for seq_tuple in permutations('XYZ'):
-        seq = ''.join(seq_tuple)
-        assert_allclose(
-            angles_diff_axes,
-            Rotation.from_euler(
-                seq, angles_diff_axes).as_euler(seq)
-        )
-
-    # First and last axes same
-    angles_same_axes = np.column_stack((angle1, angle2_pi, angle3))
-    for se_tuple in permutations('XYZ', 2):
-        # First and last axes are same
-        seq = ''.join(se_tuple) + se_tuple[0]
-        assert_allclose(
-            angles_same_axes,
-            Rotation.from_euler(
-                seq, angles_same_axes).as_euler(seq))
+    for axis1 in ['x', 'y', 'z']:
+        for axis2 in ['x', 'y', 'z']:
+            if axis1 == axis2:
+                continue
+            # Extrinsic rotations
+            seq = axis1 + axis2 + axis1
+            assert_allclose(
+                angles, Rotation.from_euler(seq, angles).as_euler(seq))
+            # Intrinsic rotations
+            seq = seq.upper()
+            assert_allclose(
+                angles, Rotation.from_euler(seq, angles).as_euler(seq))
