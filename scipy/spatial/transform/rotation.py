@@ -531,6 +531,15 @@ class Rotation(object):
         the paper is a transpose of the direction cosine matrix representation
         returned by the `as_dcm` function.
 
+        The returned angles are in the range:
+
+            - First angle belongs to [-180, 180] degrees (both inclusive)
+            - Third angle belongs to [-180, 180] degrees (both inclusive)
+            - Second angle belongs to:
+
+                - [0, 180] degrees if all axes are unique (like xyz)
+                - [-90, 90] degrees if all axes are not unique (like zxz)
+
         Parameters
         ----------
         seq : string, length 3
@@ -558,8 +567,8 @@ class Rotation(object):
         extrinsic = (re.compile('^[xyz]{1,3}$').match(seq) is not None)
         if not (intrinsic or extrinsic):
             raise ValueError("Expected axes from `seq` to be from "
-                             "['x', 'y', 'z'] or "
-                             "['X', 'Y', 'Z'], got {}".format(seq))
+                             "['x', 'y', 'z'] or ['X', 'Y', 'Z'], "
+                             "got {}".format(seq))
 
         if any(seq[i] == seq[i+1] for i in range(2)):
             raise ValueError("Expected consecutive axes to be different, "
