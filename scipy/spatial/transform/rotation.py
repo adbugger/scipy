@@ -108,14 +108,16 @@ def compute_euler_from_dcm(dcm, seq, extrinsic=False):
     angles[angles > np.pi] -= 2 * np.pi
 
     # Step 8
-    # TODO: if any observability flags are poor, possibly raise a UserWarning?
     if not np.all(safe_mask):
-        warnings.warn("Some angle sequences suffer from gimbal lock. In those "
-                      "cases, it is not possible to determine the angles "
-                      "uniquely.", UserWarning, stacklevel=1)
+        warnings.warn("Gimbal lock detected. Setting third angle to zero since"
+                      " it is not possible to uniquely determine all angles.")
 
-    # Reverse role of extrinsic and intrinsic rotations
-    return angles[:, ::-1] if extrinsic else angles
+    # Reverse role of extrinsic and intrinsic rotations, but let third angle be
+    # zero for gimbal locked cases
+    if extrinsic:
+        # angles[safe_mask] = angles[safe_mask, ::-1]
+        angles = angles[:, ::-1]
+    return angles
 
 
 def make_elementary_quat(axis, angles):
