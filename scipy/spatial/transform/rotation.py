@@ -553,15 +553,13 @@ class Rotation(object):
             - Third angle belongs to [-180, 180] degrees (both inclusive)
             - Second angle belongs to:
 
-                - [-90, 90] degrees if all axes are unique (like xyz)
-                - [0, 180] degrees if first and third axes are same (like zxz)
+                - [-90, 90] degrees if all axes are different (like xyz)
+                - [0, 180] degrees if first and third axes are the same
+                (like zxz)
 
-        Euler angles suffer from the problem of gimbal lock. It occurs when,
-        during the course of the rotation, the initial axis of rotation
-        coincides with the final axis of rotation. As a result, two of the
-        three Euler angles cannot be determined uniquely. In those cases, this
-        function raises a warning. However, the rotation represented by the
-        object is still guaranteed to be correct.
+        Euler angles suffer from the problem of gimbal lock [3]_. In this case,
+        a warning is raised, and the third angle is set to zero. Note however
+        that the returned angles still represent the correct rotation.
 
         Parameters
         ----------
@@ -582,6 +580,8 @@ class Rotation(object):
         .. [2] Malcolm D. Shuster, F. Landis Markley
                 `General Formula for Euler Angles
                 <https://arc.aiaa.org/doi/abs/10.2514/1.16622>`_
+        -- [3] `Gimbal lock
+                <https://en.wikipedia.org/wiki/Gimbal_lock#In_applied_mathematics>`_
         """
         if len(seq) != 3:
             raise ValueError("Expected 3 axes, got {}.".format(seq))
