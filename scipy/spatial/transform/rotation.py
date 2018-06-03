@@ -45,10 +45,7 @@ def compute_euler_from_dcm(dcm, seq, extrinsic=False):
     # angle offset is lambda from the paper referenced in [2] from docstring of
     # `as_euler` function
     offset = np.arctan2(sl, cl)
-    c = np.empty((3, 3))
-    c[0] = n2
-    c[1] = np.cross(n1, n2)
-    c[2] = n1
+    c = np.vstack((n2, np.cross(n1, n2), n1))
 
     # Step 3
     rt = np.array([
@@ -56,8 +53,7 @@ def compute_euler_from_dcm(dcm, seq, extrinsic=False):
         [0, cl, -sl],
         [0, sl, cl]
     ])
-    rtc = rt.dot(c)
-    res = np.einsum('...ij,...jk->...ik', rtc, dcm)
+    res = np.einsum('...ij,...jk->...ik', rt.dot(c), dcm)
     dcm_transformed = np.einsum('...ij,...jk->...ik', res, c.T)
 
     # Step 4
@@ -93,7 +89,6 @@ def compute_euler_from_dcm(dcm, seq, extrinsic=False):
     )
 
     # Step 7
-    # python modulo operator works correctly for negative numbers
     if seq[0] == seq[2]:
         # lambda = 0, so we can only ensure angle2 -> [0, pi]
         adjust_mask = np.logical_or(angles[:, 1] < 0, angles[:, 1] > np.pi)
