@@ -75,18 +75,35 @@ def compute_euler_from_dcm(dcm, seq, extrinsic=False):
     angles[safe_mask, 2] = np.arctan2(dcm_transformed[safe_mask, 0, 2],
                                       dcm_transformed[safe_mask, 1, 2])
 
-    # 6a
-    angles[~safe_mask, 2] = 0
-    # 6b
-    angles[~safe1, 0] = np.arctan2(
-        dcm_transformed[~safe1, 0, 1] - dcm_transformed[~safe1, 1, 0],
-        dcm_transformed[~safe1, 0, 0] + dcm_transformed[~safe1, 1, 1]
-    )
-    # 6c
-    angles[~safe2, 0] = np.arctan2(
-        dcm_transformed[~safe2, 0, 1] + dcm_transformed[~safe2, 1, 0],
-        dcm_transformed[~safe2, 0, 0] - dcm_transformed[~safe2, 1, 1]
-    )
+    if extrinsic:
+        # For extrinsic, set first angle to zero so that after reversal we
+        # ensure that third angle is zero
+        # 6a
+        angles[~safe_mask, 0] = 0
+        # 6b
+        angles[~safe1, 2] = np.arctan2(
+            dcm_transformed[~safe1, 0, 1] - dcm_transformed[~safe1, 1, 0],
+            dcm_transformed[~safe1, 0, 0] + dcm_transformed[~safe1, 1, 1]
+        )
+        # 6c
+        angles[~safe2, 2] = -np.arctan2(
+            dcm_transformed[~safe2, 0, 1] + dcm_transformed[~safe2, 1, 0],
+            dcm_transformed[~safe2, 0, 0] - dcm_transformed[~safe2, 1, 1]
+        )
+    else:
+        # For instrinsic, set third angle to zero
+        # 6a
+        angles[~safe_mask, 2] = 0
+        # 6b
+        angles[~safe1, 0] = np.arctan2(
+            dcm_transformed[~safe1, 0, 1] - dcm_transformed[~safe1, 1, 0],
+            dcm_transformed[~safe1, 0, 0] + dcm_transformed[~safe1, 1, 1]
+        )
+        # 6c
+        angles[~safe2, 0] = np.arctan2(
+            dcm_transformed[~safe2, 0, 1] + dcm_transformed[~safe2, 1, 0],
+            dcm_transformed[~safe2, 0, 0] - dcm_transformed[~safe2, 1, 1]
+        )
 
     # Step 7
     if seq[0] == seq[2]:
@@ -115,7 +132,6 @@ def compute_euler_from_dcm(dcm, seq, extrinsic=False):
     # Reverse role of extrinsic and intrinsic rotations, but let third angle be
     # zero for gimbal locked cases
     if extrinsic:
-        # angles[safe_mask] = angles[safe_mask, ::-1]
         angles = angles[:, ::-1]
     return angles
 
