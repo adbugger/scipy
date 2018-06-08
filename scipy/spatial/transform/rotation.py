@@ -624,7 +624,7 @@ class Rotation(object):
         This function returns a new `Rotation` instance containing the inverse
         of all the rotations in the current instance.
         """
-        quat = self._quat.copy()
+        quat = self.as_quaternion().copy()
         # (x,y,z,w) -> (x,y,z,-w)
         if self._single:
             quat[-1] *= -1
