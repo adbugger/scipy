@@ -571,3 +571,51 @@ def test_as_euler_degenerate_symmetric_axes():
                     ).as_dcm()
 
                 assert_array_almost_equal(dcm_expected, dcm_estimated)
+
+
+def test_inv():
+    np.random.seed(0)
+    n = 10
+    p = Rotation.from_quaternion(np.random.normal(size=(n, 4)))
+    q = p.inv()
+
+    p_dcm = p.as_dcm()
+    q_dcm = q.as_dcm()
+    result1 = np.einsum('...ij,...jk->...ik', p_dcm, q_dcm)
+    result2 = np.einsum('...ij,...jk->...ik', q_dcm, p_dcm)
+
+    eye3d = np.empty((n, 3, 3))
+    eye3d[:] = np.eye(3)
+
+    assert_array_almost_equal(result1, eye3d)
+    assert_array_almost_equal(result2, eye3d)
+
+
+def test_inv_single_rotation():
+    np.random.seed(0)
+    p = Rotation.from_quaternion(np.random.normal(size=(4,)))
+    q = p.inv()
+
+    p_dcm = p.as_dcm()
+    q_dcm = q.as_dcm()
+    res1 = np.dot(p_dcm, q_dcm)
+    res2 = np.dot(q_dcm, p_dcm)
+
+    eye = np.eye(3)
+
+    assert_array_almost_equal(res1, eye)
+    assert_array_almost_equal(res2, eye)
+
+    x = Rotation.from_quaternion(np.random.normal(size=(1, 4)))
+    y = x.inv()
+
+    x_dcm = x.as_dcm()
+    y_dcm = y.as_dcm()
+    result1 = np.einsum('...ij,...jk->...ik', x_dcm, y_dcm)
+    result2 = np.einsum('...ij,...jk->...ik', y_dcm, x_dcm)
+
+    eye3d = np.empty((1, 3, 3))
+    eye3d[:] = np.eye(3)
+
+    assert_array_almost_equal(result1, eye3d)
+    assert_array_almost_equal(result2, eye3d)
