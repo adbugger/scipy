@@ -9,8 +9,9 @@ import warnings
 AXIS_TO_IND = {'x': 0, 'y': 1, 'z': 2}
 
 
-def _rep_mat(q):
-    """
+def _quaternion_to_square_matrix(q):
+    """4x4 matrix for Hamiltion products of quaternions
+
     (x, y, z, w) = Q.as_quaternion()
     q_mat = np.array([
         [w, -z, y, -x],
@@ -21,16 +22,17 @@ def _rep_mat(q):
     """
     num_quat = q.shape[0]
     q_mat = np.empty((num_quat, 4, 4))
-    # w
-    q_mat[:, 0, 0] = q_mat[:, 1, 1] = q_mat[:, 2, 2] = q_mat[:, 3, 3] = q[:, 3]
 
-    q_mat[:, 3, 0] = q_mat[:, 2, 1] = q[:, 0]  # x
+    q_mat[:, 0, 0] = q_mat[:, 1, 1] = q[:, 3]   # w
+    q_mat[:, 2, 2] = q_mat[:, 3, 3] = q[:, 3]   # w
+
+    q_mat[:, 3, 0] = q_mat[:, 2, 1] = q[:, 0]   # x
     q_mat[:, 1, 2] = q_mat[:, 0, 3] = -q[:, 0]  # -x
 
-    q_mat[:, 0, 2] = q_mat[:, 3, 1] = q[:, 1]  # y
+    q_mat[:, 0, 2] = q_mat[:, 3, 1] = q[:, 1]   # y
     q_mat[:, 2, 0] = q_mat[:, 1, 3] = -q[:, 1]  # -y
 
-    q_mat[:, 1, 0] = q_mat[:, 3, 2] = q[:, 2]  # z
+    q_mat[:, 1, 0] = q_mat[:, 3, 2] = q[:, 2]   # z
     q_mat[:, 0, 1] = q_mat[:, 2, 3] = -q[:, 2]  # -z
 
     return q_mat
@@ -172,8 +174,7 @@ def _make_elementary_quat(axis, angles):
 
 
 def _compose_quat(p, q):
-    # p and q should have same shape (N, 4)
-    product = np.empty_like(p)
+    product = np.empty((max(p.shape[0], q.shape[0]), 4))
     # Scalar part of result
     product[:, 3] = p[:, 3] * q[:, 3] - np.sum(p[:, :3] * q[:, :3], axis=1)
     # Vector part of result
@@ -219,6 +220,7 @@ class Rotation(object):
     from_euler
     as_euler
     inv
+    __mul__
     """
     def __init__(self, quat, normalized=False):
         self._single = False
@@ -658,15 +660,22 @@ class Rotation(object):
         return self.__class__(quat, normalized=True)
 
     def __mul__(self, other):
-        p = self._quat
-        q = other._quat
-        q_mat = _rep_mat(q)
+        """Returns the composition of the rotations.
 
-        # einsum handles Nx1, NxN, 1xN for us
-        # raises ValueError if broadcasting is not possible
-        result = np.einsum('...ij,...ijk->...ik', p, q_mat)
+        If `p` and `q` are two rotations, then the composition of 'q followed
+        by p' is equivalent to `p * q`, which is the same as
+        `p.as_dcm().dot(q.as_dcm())`.
 
+        This function supports composition of multiple rotations at a time:
+
+            - Either `p` or `q` contains a single rotation. In this case the
+              returned object contains the result of composing each rotation in
+              the other object with the single rotation
+            - Both `p` and `q` contain `N` rotations. In this case each
+              rotation `p[i]` is composed with each rotation `q[i]` and the
+              returned object contains `N` rotations.
+        """
+        result = _compose_quat(self._quat, other._quat)
         if self._single and other._single:
             result = result[0]
-
         return self.__class__(result, normalized=True)
