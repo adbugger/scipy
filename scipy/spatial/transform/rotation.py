@@ -9,35 +9,6 @@ import warnings
 AXIS_TO_IND = {'x': 0, 'y': 1, 'z': 2}
 
 
-def _quaternion_to_square_matrix(q):
-    """4x4 matrix for Hamiltion products of quaternions
-
-    (x, y, z, w) = Q.as_quaternion()
-    q_mat = np.array([
-        [w, -z, y, -x],
-        [z, w, -x, -y],
-        [-y, x, w, -z],
-        [x,  y, z,  w],
-    ])
-    """
-    num_quat = q.shape[0]
-    q_mat = np.empty((num_quat, 4, 4))
-
-    q_mat[:, 0, 0] = q_mat[:, 1, 1] = q[:, 3]   # w
-    q_mat[:, 2, 2] = q_mat[:, 3, 3] = q[:, 3]   # w
-
-    q_mat[:, 3, 0] = q_mat[:, 2, 1] = q[:, 0]   # x
-    q_mat[:, 1, 2] = q_mat[:, 0, 3] = -q[:, 0]  # -x
-
-    q_mat[:, 0, 2] = q_mat[:, 3, 1] = q[:, 1]   # y
-    q_mat[:, 2, 0] = q_mat[:, 1, 3] = -q[:, 1]  # -y
-
-    q_mat[:, 1, 0] = q_mat[:, 3, 2] = q[:, 2]   # z
-    q_mat[:, 0, 1] = q_mat[:, 2, 3] = -q[:, 2]  # -z
-
-    return q_mat
-
-
 def _elementary_basis_vector(axis):
     b = np.zeros(3)
     b[AXIS_TO_IND[axis]] = 1
