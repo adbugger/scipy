@@ -646,6 +646,13 @@ class Rotation(object):
               rotation `p[i]` is composed with each rotation `q[i]` and the
               returned object contains `N` rotations.
         """
+        if not(self._quat.shape[0] == 1 or other._quat.shape[0] == 1 or
+               self._quat.shape[0] == other._quat.shape[0]):
+            raise ValueError("Expected equal number of rotations in both "
+                             "or a single rotation in either object, "
+                             "got {} rotations in first and {} rotations in "
+                             "second object.".format(
+                                self._quat.shape[0], other._quat.shape[0]))
         result = _compose_quat(self._quat, other._quat)
         if self._single and other._single:
             result = result[0]
