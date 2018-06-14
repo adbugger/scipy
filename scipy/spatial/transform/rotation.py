@@ -657,3 +657,29 @@ class Rotation(object):
         if self._single and other._single:
             result = result[0]
         return self.__class__(result, normalized=True)
+
+
+class Slerp(object):
+    """Spherical Linear Interpolation of Rotations.
+
+    The SLERP algorithm guarantees that the interpolated rotations will have
+    constanct angular velocity between each successive "keyframe" rotation.
+
+    Given a set of `Rotation` objects and corresponding fixed `timestamps`,
+    this class will initialize a `Slerp` instance which is an interpolator. The
+    interpolator can be called with another set of timestamps to return a
+    single `Rotation` object containing the interpolated rotations.
+
+    Parameters
+    ----------
+    rotations : a `Rotation` instance
+        This object contains the fixed rotations between which the
+        interpolation will be done.
+    timestamps : array_like, shape (N,)
+        An array of timestamps, sorted in increasing order, for the fixed
+        rotations. The number of times must be equal to the number of rotations
+        specified in the `rotations` object.
+    """
+    def __init__(self, rotations, timestamps):
+        self._rots = rotations
+        self._times = timestamps
