@@ -173,9 +173,8 @@ def _elementary_quat_compose(seq, angles, intrinsic=False):
 class Rotation(object):
     """Rotation in 3 dimensions.
 
-    This class will include initializers from different representations,
-    converters and some useful algorithms such as quaternion slerp and
-    rotation estimation.
+    This class will include initializers from, and converters to different
+    representations, rotation compositions and applications.
 
     For initializing Rotations usage of `from_...` methods such as
     `from_quaternion` is recommended instead of using `__init__`.
