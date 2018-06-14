@@ -19,7 +19,7 @@ This package supports `Rotation` transforms with the following representations
 
 It also implements some useful algorithms such as
 
-* Quaternion slerp
+* Quaternion `Slerp` (Spherical Linear intERPolation)
 * Quaternion spline
 * Rotation estimation (Wahba's problem)
 
@@ -30,6 +30,7 @@ Class Reference
     :toctree: generated/
 
     Rotation
+    Slerp
 
 """
 from __future__ import division, print_function, absolute_import
