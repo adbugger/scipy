@@ -664,8 +664,8 @@ class Slerp(object):
     The SLERP algorithm guarantees that the interpolated rotations will have
     constanct angular velocity between each successive "keyframe" rotation.
 
-    Given a set of `Rotation` objects and corresponding fixed `timestamps`,
-    this class will initialize a `Slerp` instance which is an interpolator. The
+    Given a set of `rotations` and corresponding fixed `timestamps`, this class
+    will initialize a `Slerp` instance which is an interpolator. The
     interpolator can be called with another set of timestamps to return a
     single `Rotation` object containing the interpolated rotations.
 
