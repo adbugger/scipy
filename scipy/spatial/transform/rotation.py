@@ -678,7 +678,76 @@ class Slerp(object):
         An array of timestamps, sorted in increasing order, for the fixed
         rotations. The number of times must be equal to the number of rotations
         specified in the `rotations` object.
+
+    Methods
+    -------
+    __call__
     """
     def __init__(self, rotations, timestamps):
         self._rots = rotations
-        self._times = timestamps
+        # Possibly sort timestamps, or add a sorted flag?
+        self._times = np.asarray(timestamps)
+
+        if self._times.shape[0] != self._rots._quat.shape[0]:
+            raise ValueError("Expected number of rotations to be equal to "
+                             "number of keyframe timestamps, got {} rotations "
+                             "and {} timestamps.".format(
+                                self._rots._quat.shape[0],
+                                self._times.shape[0],
+                             ))
+
+    def __call__(self, timestamps):
+        """Generates the interpolated rotation at given times.
+
+        The interpolation is done using the Spherical Linear intERPolation
+        (SLERP) algorithm given in [1]_. This ensures that the interpolated
+        quaternions follow the shortest path between initial and final
+        orientations, and results in rotation around a single axis with
+        constant velocity.
+
+        Parameters
+        ----------
+        timestamps : array_like, 1D
+            An array of increasing timestamps, for the interpolated rotations
+
+        References
+        ----------
+        .. [1] `Quaternion Slerp
+                <https://en.wikipedia.org/wiki/Slerp#Quaternion_Slerp>`_
+        """
+        # Possibly sort timestamps, or add a sorted flag?
+        frames = np.asarray(timestamps)
+        n_frames = frames.shape[0]
+
+        # Assuming times are sorted, find q0, q1 and t for each frame
+        q0 = np.empty((n_frames, 4))
+        q1 = np.empty((n_frames, 4))
+        t = np.empty((n_frames, 1))
+
+        frame_ind = 0
+        times_ind = 0
+        while frame_ind < n_frames:
+            while self._times[times_ind] < frames[frame_ind]:
+                times_ind += 1
+            q1[frame_ind] = self._rots._quat[times_ind]
+            q0[frame_ind] = self._rots._quat[times_ind - 1]
+            t[frame_ind] = ((frames[frame_ind] - self._times[times_ind - 1]) /
+                            (self._times[times_ind] - self._times[times_ind]))
+            frame_ind += 1
+
+        # Calculate inv(q0) * q1
+        q0[:, -1] *= -1
+        q = _compose_quat(q0, q1)
+        # Make the real part of q positive so that we have a rotation
+        # the "short" way
+        q[q[:, -1] < 0] *= -1
+
+        # Raise q to the power of t
+        # q should already be normalized, check this
+        r = Rotation.from_quaternion(q, normalized=True).as_rotvec()
+        q_t = Rotation.from_rotvec(r * t).as_quaternion()
+
+        # Finally interpolate quaternions
+        # Again verify that it is unit norm
+        return Rotation.from_quaternion(_compose_quat(q0, q_t),
+                                        normalized=True)
