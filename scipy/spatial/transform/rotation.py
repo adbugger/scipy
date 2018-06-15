@@ -662,18 +662,19 @@ class Rotation(object):
     def apply(self, vectors, inverse=False):
         """Apply this rotation on a set of vectors.
 
-        There are 2 ways to visualize a rotation of vectors:
-
-            - The rotation transform represents a change of basis. In this
-              sense, a rotation is simply a projection of the vector components
-              along the new axes.
-            - It can also be thought of as a physical rotation of a vector
-              being glued to the original frame as it rotates.
-
         Rotates `vectors` by the rotation(s) represented in the object. In
         terms of DCMs, this application is the same as
         `self.as_dcm().dot(vectors)`. For an object containing `N` rotations
         applied on `P` vectors, returns a `numpy.ndarray` of shape `(N, P, 3)`.
+
+        If the original frame rotates to the final frame by this rotation, then
+        its application to a vector can be seen in two ways:
+
+            - As a projection of vector components expressed in the final frame
+              to the original frame.
+            - As the physical rotation of a vector being glued to the original
+              frame as it rotates. In this case the vector components are
+              expressed in the original frame before and after rotation.
 
         Parameters
         ----------
