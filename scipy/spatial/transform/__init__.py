@@ -19,7 +19,7 @@ This package supports `Rotation` transforms with the following representations
 
 It also implements some useful algorithms such as
 
-* Quaternion `Slerp` (Spherical Linear intERPolation)
+* Quaternion `Slerp` (Spherical Linear Interpolation)
 * Quaternion spline
 * Rotation estimation (Wahba's problem)
 
