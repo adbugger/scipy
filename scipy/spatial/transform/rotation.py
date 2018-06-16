@@ -722,42 +722,36 @@ class Slerp(object):
         rot_params = self.r0.inv() * r[1:]
         self.interp_rotvecs = rot_params.as_rotvec()
 
-    def __call__(self, timestamps):
-        """Generate interpolated rotations at given times.
+    def __call__(self, t):
+        """Compute interpolated rotations at given times.
 
-        Given an array of `timestamps` returns a `Rotation` instance with the
-        interpolated rotations at the given times.
+        Returns a `Rotation` instance with the interpolated rotations.
 
         Parameters
         ----------
-        timestamps : array_like, 1D
-            An array of increasing timestamps, for the interpolated rotations
+        t : array_like, 1D
+            Times to compute the interpolations at.
         """
-        frames = np.asarray(timestamps)
+        t = np.asarray(t)
+        if t.ndim != 1:
+            raise ValueError("Expected times to be specified in a 1 "
+                             "dimensional array, got {} "
+                             "dimensions.".format(t.ndim))
 
-        if frames.ndim > 1:
-            raise ValueError("Expected given timestamps to be 1 dimensional ,"
-                             "got {} dimensions.".format(frames.ndim))
+        # Index of largest keyframe times less than or equal to given time.
+        # side='right' or side='left' will exclude one of the endpoints
+        # of the time range. 'left' excludes t_min.
+        ind = np.searchsorted(self.times, t) - 1
+        # Include t_min. Without this step, index for t_min equals -1
+        ind[t == self.times[0]] = 0
+        if np.any(ind < 0 | ind >= self.num_rots - 1):
+            raise ValueError("Interpolation times must be within the range "
+                             "[{}, {}], both inclusive.".format(
+                                self.times[0], self.times[-1]))
 
-        # Index of largest keyframe time less than or equal to given time
-        # Given timestamps need not be sorted anymore
-        q0_ind = np.searchsorted(self._times, frames, side='right') - 1
-        if(np.any(q0_ind < 0) or np.any(q0_ind >= self._num_rots - 1)):
-            raise ValueError("Expected given timestamp to be within range of "
-                             "keyframe timestamps [{}, {}].".format(
-                                self._times[0], self._times[-1]))
+        rots = self.rots[ind]
+        interp_exponents = (t - self.times[ind]) / self.timedelta[ind]
+        # Ensure the 1D exponent array is broadcasted column wise
+        interp_params = self.interp_rotvecs[ind] * interp_exponents[:, None]
 
-        q0 = self._key_quats[q0_ind]
-        q0_q1_rotvec = self._interp_rotvecs[q0_ind]
-        t = ((frames - self._times[q0_ind]) /
-             (self._times[q0_ind + 1] - self._times[q0_ind]))
-        # Ensure t is a column vector so that broadcasting happens column wise
-        # when multiplying with rotation vectors
-        t = t[:, None]
-
-        # Multiply by interpolation parameter
-        interp_quats = Rotation.from_rotvec(q0_q1_rotvec * t).as_quaternion()
-
-        # Finally interpolate
-        return Rotation.from_quaternion(_compose_quat(q0, interp_quats),
-                                        normalized=True)
+        return rots * Rotation.from_rotvec(interp_params)
