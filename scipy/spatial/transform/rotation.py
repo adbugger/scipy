@@ -658,30 +658,37 @@ class Rotation(object):
             result = result[0]
         return self.__class__(result, normalized=True)
 
+    def __getitem__(self, val):
+        # Returns a single rotation for an index, and a stack of rotations for
+        # a slice, even if slice itself contains a single index
+        if type(val) not in [int, slice]:
+            raise TypeError("Rotation indexes must be integers or slices, "
+                            "not {}".format(type(val).__name__))
+        # Checking index within range is simple for a single index, but for the
+        # slice, the last index will need to be calculated. Perhaps it is best
+        # to let numpy do that and raise the IndexError?
+        return self.__class__.from_quaternion(self._quat[val], normalized=True)
+
+    def copy(self):
+        return self.__class__.from_quaternion(
+            self.as_quaternion(), normalized=True)
+
 
 class Slerp(object):
     """Spherical Linear Interpolation of Rotations.
 
-    The interpolation is done using the Spherical Linear intERPolation
-    (SLERP) algorithm given in [1]_. This ensures that the interpolated
-    quaternions follow the shortest path between initial and final
-    orientations, and results in rotation around a single axis with
-    constant velocity.
-
-    Given a set of `rotations` and corresponding fixed `timestamps`, this class
-    will initialize a `Slerp` instance which is an interpolator. The
-    interpolator can be called with another set of timestamps to return a
-    single `Rotation` object containing the interpolated rotations.
+    The interpolation between consecutive rotations is performed as a rotation
+    around a fixed axis with a constant angular velocity [1]_. This ensures
+    that the interpolated rotations follow the shortest path between initial
+    and final orientations.
 
     Parameters
     ----------
     t : array_like, shape (N,)
-        An array of strictly increasing timestamps for the fixed rotations. The
-        number of times `N` must be equal to the number of rotations specified
-        in the `rotations` object.
-    r : a `Rotation` instance
-        This object contains the fixed rotations between which the
-        interpolation will be done. Must contain `N`rotations and at least 2.
+        Times of the known rotations. At least 2 times must be specified.
+    r : `Rotation` instance
+        `N` rotations to perform the interpolation between. At least 2
+        rotations must be specified.
 
     Methods
     -------
