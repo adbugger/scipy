@@ -661,12 +661,6 @@ class Rotation(object):
     def __getitem__(self, val):
         # Returns a single rotation for an index, and a stack of rotations for
         # a slice, even if slice itself contains a single index
-        if type(val) not in [int, slice]:
-            raise TypeError("Rotation indexes must be integers or slices, "
-                            "not {}".format(type(val).__name__))
-        # Checking index within range is simple for a single index, but for the
-        # slice, the last index will need to be calculated. Perhaps it is best
-        # to let numpy do that and raise the IndexError?
         return self.__class__.from_quaternion(self._quat[val], normalized=True)
 
     def copy(self):
