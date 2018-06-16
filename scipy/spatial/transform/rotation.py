@@ -702,8 +702,9 @@ class Slerp(object):
 
         t = np.asarray(t)
         if t.ndim != 1:
-            raise ValueError("Times must be specified in a 1 dimensional "
-                             "array, got {} dimensions.".format(t.ndim))
+            raise ValueError("Expected times to be specified in a 1 "
+                             "dimensional array, got {} "
+                             "dimensions.".format(t.ndim))
 
         if t.shape[0] != r.num_rots:
             raise ValueError("Expected number of rotations to be equal to "
