@@ -663,3 +663,69 @@ def test_slerp():
 
     # Miscellaneous checks
     assert_equal(interp_rots.num_rots, len(times))
+
+
+def test_slerp_single_rot():
+    with pytest.raises(ValueError, match="at least 2 rotations"):
+        r = Rotation.from_quaternion([1, 2, 3, 4])
+        Slerp([1], r)
+
+
+def test_slerp_time_dim_mismatch():
+    with pytest.raises(ValueError,
+                       match="times to be specified in a 1 dimensional array"):
+        np.random.seed(0)
+        r = Rotation.from_quaternion(np.random.uniform(size=(2, 4)))
+        t = np.array([[1],
+                      [2]])
+        Slerp(t, r)
+
+
+def test_slerp_num_rotations_mismatch():
+    with pytest.raises(ValueError, match="number of rotations to be equal to "
+                                         "number of timestamps"):
+        np.random.seed(0)
+        r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+        t = np.arange(7)
+        Slerp(t, r)
+
+
+def test_slerp_equal_times():
+    with pytest.raises(ValueError, match="strictly increasing order"):
+        np.random.seed(0)
+        r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+        t = [0, 1, 2, 2, 4]
+        Slerp(t, r)
+
+
+def test_slerp_decreasing_times():
+    with pytest.raises(ValueError, match="strictly increasing order"):
+        np.random.seed(0)
+        r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+        t = [0, 1, 3, 2, 4]
+        Slerp(t, r)
+
+
+def test_slerp_call_time_dim_mismatch():
+    np.random.seed(0)
+    r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+    t = np.arange(5)
+    s = Slerp(t, r)
+
+    with pytest.raises(ValueError,
+                       match="times to be specified in a 1 dimensional array"):
+        interp_times = np.array([[3.5],
+                                 [4.2]])
+        s(interp_times)
+
+
+def test_slerp_call_time_out_of_range():
+    np.random.seed(0)
+    r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+    t = np.arange(5) + 1
+    s = Slerp(t, r)
+
+    with pytest.raises(ValueError, match="times must be within the range"):
+        s([0, 1, 2])
+    with pytest.raises(ValueError, match="times must be within the range"):
+        s([1, 2, 6])
