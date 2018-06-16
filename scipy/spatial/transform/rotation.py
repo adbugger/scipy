@@ -659,8 +659,9 @@ class Rotation(object):
         return self.__class__(result, normalized=True)
 
     def __getitem__(self, val):
-        # Returns a single rotation for an index, and a stack of rotations for
-        # a slice, even if slice itself contains a single index
+        # Returns a single rotation for an index, and a stack of rotation(s)
+        # for slice, index array, etc even if only one index is ultimately
+        # given
         return self.__class__.from_quaternion(self._quat[val], normalized=True)
 
     def copy(self):
@@ -694,7 +695,7 @@ class Slerp(object):
             <https://en.wikipedia.org/wiki/Slerp#Quaternion_Slerp>`_
     """
     def __init__(self, t, r):
-        # We don't need to store r, just r0 and the interpolation parameters
+        # We don't need to store r, just r[:-1] and interpolation rotvecs
         if r.num_rots == 1:
             raise ValueError("Expected at least 2 rotations in object, "
                              "got {}.".format(r.num_rots))
@@ -714,12 +715,12 @@ class Slerp(object):
         self.timedelta = np.diff(t)
 
         if np.any(self.timedelta <= 0):
-            raise ValueError("Expected strictly increasing times.")
+            raise ValueError("Times must be in strictly increasing order.")
 
         # inv() and __getitem__ return new objects anyway
-        self.r0 = r[:-1]
+        self.rots = r[:-1]
         rot_params = self.r0.inv() * r[1:]
-        self.interp_parameters = rot_params.as_rotvec()
+        self.interp_rotvecs = rot_params.as_rotvec()
 
     def __call__(self, timestamps):
         """Generate interpolated rotations at given times.
