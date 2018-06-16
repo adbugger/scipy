@@ -699,18 +699,17 @@ class Slerp(object):
         if r.num_rots == 1:
             raise ValueError("Expected at least 2 rotations in object, "
                              "got {}.".format(r.num_rots))
-        self.num_rots = r.num_rots
 
         t = np.asarray(t)
         if t.ndim != 1:
             raise ValueError("Times must be specified in a 1 dimensional "
                              "array, got {} dimensions.".format(t.ndim))
 
-        if t.shape[0] != self.num_rots:
+        if t.shape[0] != r.num_rots:
             raise ValueError("Expected number of rotations to be equal to "
                              "number of timestamps given, got {} rotations "
                              "and {} timestamps.".format(
-                                self.num_rots, self.times.shape[0]))
+                                r.num_rots, t.shape[0]))
         self.times = t
         self.timedelta = np.diff(t)
 
@@ -719,7 +718,9 @@ class Slerp(object):
 
         # inv() and __getitem__ return new objects anyway
         self.rots = r[:-1]
-        rot_params = self.r0.inv() * r[1:]
+        # should be equal to r.rots - 1
+        self.num_rots = self.rots.num_rots
+        rot_params = self.rots.inv() * r[1:]
         self.interp_rotvecs = rot_params.as_rotvec()
 
     def __call__(self, t):
@@ -744,7 +745,9 @@ class Slerp(object):
         ind = np.searchsorted(self.times, t) - 1
         # Include t_min. Without this step, index for t_min equals -1
         ind[t == self.times[0]] = 0
-        if np.any(ind < 0 | ind >= self.num_rots - 1):
+        # self.num_rots = number of rotations in self.rots, not number of
+        # rotations in original object
+        if np.any(np.logical_or(ind < 0, ind > self.num_rots - 1)):
             raise ValueError("Interpolation times must be within the range "
                              "[{}, {}], both inclusive.".format(
                                 self.times[0], self.times[-1]))
