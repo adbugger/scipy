@@ -223,6 +223,7 @@ class Rotation(object):
             # Normalize each quaternion, ensuring norm is broadcasted along
             # each column.
             self._quat[~zero_norms] /= norms[~zero_norms][:, None]
+        self.num_rots = self._quat.shape[0]
 
     @classmethod
     def from_quaternion(cls, quat, normalized=False):
