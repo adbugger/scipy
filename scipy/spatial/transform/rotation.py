@@ -700,33 +700,32 @@ class Slerp(object):
             <https://en.wikipedia.org/wiki/Slerp#Quaternion_Slerp>`_
     """
     def __init__(self, t, r):
-        self._key_quats = r._quat
-        self._num_rots = r._quat.shape[0]
-        self._times = np.asarray(t)
+        # We don't need to store r, just r0 and the interpolation parameters
+        if r.num_rots == 1:
+            raise ValueError("Expected at least 2 rotations in object, "
+                             "got {}.".format(r.num_rots))
+        self.num_rots = r.num_rots
 
-        if self._num_rots == 1:
-            raise ValueError("Expected at least 2 rotations in rotation object"
-                             ", got {}.".format(self._num_rots))
+        t = np.asarray(t)
+        if t.ndim != 1:
+            raise ValueError("Times must be specified in a 1 dimensional "
+                             "array, got {} dimensions.".format(t.ndim))
 
-        if self._times.ndim > 1:
-            raise ValueError("Expected keyframe timestamp array to be 1 "
-                             "dimensional, got {} dimensions.".format(
-                                self._times.ndim))
-
-        if self._times.shape[0] != self._num_rots:
+        if t.shape[0] != self.num_rots:
             raise ValueError("Expected number of rotations to be equal to "
-                             "number of keyframe timestamps, got {} rotations "
+                             "number of timestamps given, got {} rotations "
                              "and {} timestamps.".format(
-                                self._num_rots,
-                                self._times.shape[0],
-                             ))
+                                self.num_rots, self.times.shape[0]))
+        self.times = t
+        self.timedelta = np.diff(t)
 
-        # Make a copy for modification
-        q0 = self._key_quats[0:-1].copy()
-        q0[:, -1] *= -1
-        q1 = self._key_quats[1:]
-        self._interp_rotvecs = Rotation.from_quaternion(
-            _compose_quat(q0, q1)).as_rotvec()
+        if np.any(self.timedelta <= 0):
+            raise ValueError("Expected strictly increasing times.")
+
+        # inv() and __getitem__ return new objects anyway
+        self.r0 = r[:-1]
+        rot_params = self.r0.inv() * r[1:]
+        self.interp_parameters = rot_params.as_rotvec()
 
     def __call__(self, timestamps):
         """Generate interpolated rotations at given times.
