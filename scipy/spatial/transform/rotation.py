@@ -695,9 +695,9 @@ class Slerp(object):
 
     Parameters
     ----------
-    t : array_like, shape (N,)
+    times : array_like, shape (N,)
         Times of the known rotations. At least 2 times must be specified.
-    r : `Rotation` instance
+    rotations : `Rotation` instance
         `N` rotations to perform the interpolation between. At least 2
         rotations must be specified.
 
@@ -710,58 +710,57 @@ class Slerp(object):
     .. [1] `Quaternion Slerp
             <https://en.wikipedia.org/wiki/Slerp#Quaternion_Slerp>`_
     """
-    def __init__(self, t, r):
-        # We don't need to store r, just r[:-1] and interpolation rotvecs
-        if r.num_rots == 1:
+    def __init__(self, times, rotations):
+        # We don't need to store all rotations, just rotations[:-1] and
+        # interpolation rotvecs
+        if rotations.num_rots == 1:
             raise ValueError("Expected at least 2 rotations in object, "
-                             "got {}.".format(r.num_rots))
+                             "got {}.".format(rotations.num_rots))
 
-        t = np.asarray(t)
-        if t.ndim != 1:
+        times = np.asarray(times)
+        if times.ndim != 1:
             raise ValueError("Expected times to be specified in a 1 "
                              "dimensional array, got {} "
-                             "dimensions.".format(t.ndim))
+                             "dimensions.".format(times.ndim))
 
-        if t.shape[0] != r.num_rots:
+        if times.shape[0] != rotations.num_rots:
             raise ValueError("Expected number of rotations to be equal to "
                              "number of timestamps given, got {} rotations "
                              "and {} timestamps.".format(
-                                r.num_rots, t.shape[0]))
-        self.times = t
-        self.timedelta = np.diff(t)
+                                rotations.num_rots, times.shape[0]))
+        self.times = times
+        self.timedelta = np.diff(times)
 
         if np.any(self.timedelta <= 0):
             raise ValueError("Times must be in strictly increasing order.")
 
         # inv() and __getitem__ return new objects anyway
-        self.rots = r[:-1]
+        self.rots = rotations[:-1]
         # should be equal to r.rots - 1
         self.num_rots = self.rots.num_rots
-        rot_params = self.rots.inv() * r[1:]
-        self.interp_rotvecs = rot_params.as_rotvec()
+        self.rotvecs = (self.rots.inv() * rotations[1:]).as_rotvec()
 
-    def __call__(self, t):
+    def __call__(self, times):
         """Compute interpolated rotations at given times.
 
         Returns a `Rotation` instance with the interpolated rotations.
 
         Parameters
         ----------
-        t : array_like, 1D
+        times : array_like, 1D
             Times to compute the interpolations at.
         """
-        t = np.asarray(t)
-        if t.ndim != 1:
+        # Clearly differentiate from self.times property
+        compute_times = np.asarray(times)
+        if compute_times.ndim != 1:
             raise ValueError("Expected times to be specified in a 1 "
                              "dimensional array, got {} "
-                             "dimensions.".format(t.ndim))
+                             "dimensions.".format(compute_times.ndim))
 
-        # Index of largest keyframe times less than or equal to given time.
-        # side='right' or side='left' will exclude one of the endpoints
-        # of the time range. 'left' excludes t_min.
-        ind = np.searchsorted(self.times, t) - 1
+        # side = 'left' (default) excludes t_min.
+        ind = np.searchsorted(self.times, compute_times) - 1
         # Include t_min. Without this step, index for t_min equals -1
-        ind[t == self.times[0]] = 0
+        ind[compute_times == self.times[0]] = 0
         # self.num_rots = number of rotations in self.rots, not number of
         # rotations in original object
         if np.any(np.logical_or(ind < 0, ind > self.num_rots - 1)):
@@ -769,9 +768,8 @@ class Slerp(object):
                              "[{}, {}], both inclusive.".format(
                                 self.times[0], self.times[-1]))
 
-        rots = self.rots[ind]
-        interp_exponents = (t - self.times[ind]) / self.timedelta[ind]
-        # Ensure the 1D exponent array is broadcasted column wise
-        interp_params = self.interp_rotvecs[ind] * interp_exponents[:, None]
+        alpha = (compute_times - self.times[ind]) / self.timedelta[ind]
 
-        return rots * Rotation.from_rotvec(interp_params)
+        # Ensure the 1D alpha array is broadcasted column wise
+        return (self.rots[ind] *
+                Rotation.from_rotvec(self.rotvecs[ind] * alpha[:, None]))
