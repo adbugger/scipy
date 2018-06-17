@@ -210,10 +210,8 @@ class Rotation(object):
             quat = quat[None, :]
             self._single = True
 
-        if normalized:
-            self._quat = quat
-        else:
-            self._quat = quat.copy()
+        self._quat = quat.copy()
+        if not normalized:
             # L2 norm of each row
             norms = scipy.linalg.norm(quat, axis=1)
 
@@ -256,9 +254,9 @@ class Rotation(object):
         on the input that was used to initialize the object.
         """
         if self._single:
-            return self._quat[0]
+            return self._quat[0].copy()
         else:
-            return self._quat
+            return self._quat.copy()
 
     def as_dcm(self):
         """Return the direction cosine matrix representation of the Rotation.
