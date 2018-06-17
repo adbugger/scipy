@@ -191,6 +191,8 @@ class Rotation(object):
     as_euler
     inv
     __mul__
+    __getitem__
+    copy
     """
     def __init__(self, quat, normalized=False):
         self._single = False
@@ -659,14 +661,30 @@ class Rotation(object):
         return self.__class__(result, normalized=True)
 
     def __getitem__(self, val):
-        # Returns a single rotation for an index, and a stack of rotation(s)
-        # for slice, index array, etc even if only one index is ultimately
-        # given
-        return self.__class__.from_quaternion(self._quat[val], normalized=True)
+        """Extract rotation at given index(es) from object.
+
+        This function returns a new `Rotation` instance containing:
+
+            - a single rotation, if `val` is a single index
+            - a stack of rotation(s), if `val` is a slice, or an index array.
+              In cases where a single index is ultimately specified, the stack
+              will contain a single rotation.
+
+        Parameters
+        ----------
+        val : index, slice, or index array
+            This parameter specifies which rotation(s) to extract.
+        """
+        # __init__ now copies for all cases
+        return self.__class__(self._quat[val], normalized=True)
 
     def copy(self):
-        return self.__class__.from_quaternion(
-            self.as_quaternion(), normalized=True)
+        """Copy this object.
+
+        Returns a copy of this `Rotation` instance.
+        """
+        # __init__ now copies for all cases
+        return self.__class__(self.as_quaternion(), normalized=True)
 
 
 class Slerp(object):
