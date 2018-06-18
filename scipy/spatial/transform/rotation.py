@@ -553,7 +553,7 @@ class Rotation(object):
                              "num_axes), got {}.".format(angles.shape))
 
         quat = _elementary_quat_compose(seq, angles, intrinsic)
-        return cls(quat[0] if is_single else quat, normalized=True)
+        return cls(quat[0] if is_single else quat, normalized=True, copy=False)
 
     def as_euler(self, seq, degrees=False):
         """Return the Euler angles representation of the Rotation.
