@@ -662,7 +662,7 @@ def test_slerp():
     assert_allclose(cos_theta3, 2 * (cos_theta1**2) - 1)
 
     # Miscellaneous checks
-    assert_equal(interp_rots.num_rots, len(times))
+    assert_equal(interp_rots.n, len(times))
 
 
 def test_slerp_single_rot():

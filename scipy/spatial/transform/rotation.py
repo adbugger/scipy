@@ -224,7 +224,10 @@ class Rotation(object):
             # Normalize each quaternion, ensuring norm is broadcasted along
             # each column.
             self._quat[~zero_norms] /= norms[~zero_norms][:, None]
-        self.num_rots = self._quat.shape[0]
+
+    @property
+    def n(self):
+        return self._quat.shape[0]
 
     @classmethod
     def from_quaternion(cls, quat, normalized=False, copy=True):
@@ -683,7 +686,7 @@ class Rotation(object):
             Specifies which rotation(s) to extract.
         """
         # __init__ now copies for all cases
-        return self.__class__(self._quat[val], normalized=True)
+        return self.__class__(self._quat[indexer], normalized=True)
 
 
 class Slerp(object):
@@ -712,11 +715,8 @@ class Slerp(object):
             <https://en.wikipedia.org/wiki/Slerp#Quaternion_Slerp>`_
     """
     def __init__(self, times, rotations):
-        # We don't need to store all rotations, just rotations[:-1] and
-        # interpolation rotvecs
-        if rotations.num_rots == 1:
-            raise ValueError("Expected at least 2 rotations in object, "
-                             "got {}.".format(rotations.num_rots))
+        if rotations.n == 1:
+            raise ValueError("`rotations` must contain at least 2 rotations.")
 
         times = np.asarray(times)
         if times.ndim != 1:
@@ -724,11 +724,11 @@ class Slerp(object):
                              "dimensional array, got {} "
                              "dimensions.".format(times.ndim))
 
-        if times.shape[0] != rotations.num_rots:
+        if times.shape[0] != rotations.n:
             raise ValueError("Expected number of rotations to be equal to "
                              "number of timestamps given, got {} rotations "
                              "and {} timestamps.".format(
-                                rotations.num_rots, times.shape[0]))
+                                rotations.n, times.shape[0]))
         self.times = times
         self.timedelta = np.diff(times)
 
@@ -736,10 +736,8 @@ class Slerp(object):
             raise ValueError("Times must be in strictly increasing order.")
 
         # inv() and __getitem__ return new objects anyway
-        self.rots = rotations[:-1]
-        # should be equal to r.rots - 1
-        self.num_rots = self.rots.num_rots
-        self.rotvecs = (self.rots.inv() * rotations[1:]).as_rotvec()
+        self.rotations = rotations[:-1]
+        self.rotvecs = (self.rotations.inv() * rotations[1:]).as_rotvec()
 
     def __call__(self, times):
         """Compute interpolated rotations at given times.
@@ -764,13 +762,12 @@ class Slerp(object):
         ind[compute_times == self.times[0]] = 0
         # self.num_rots = number of rotations in self.rots, not number of
         # rotations in original object
-        if np.any(np.logical_or(ind < 0, ind > self.num_rots - 1)):
+        if np.any(np.logical_or(ind < 0, ind > self.rotations.n - 1)):
             raise ValueError("Interpolation times must be within the range "
                              "[{}, {}], both inclusive.".format(
                                 self.times[0], self.times[-1]))
 
         alpha = (compute_times - self.times[ind]) / self.timedelta[ind]
 
-        # Ensure the 1D alpha array is broadcasted column wise
-        return (self.rots[ind] *
+        return (self.rotations[ind] *
                 Rotation.from_rotvec(self.rotvecs[ind] * alpha[:, None]))
