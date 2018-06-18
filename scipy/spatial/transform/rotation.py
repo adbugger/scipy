@@ -227,6 +227,7 @@ class Rotation(object):
 
     @property
     def n(self):
+        """Number of rotations contained in object."""
         return self._quat.shape[0]
 
     @classmethod
