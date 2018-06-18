@@ -192,7 +192,6 @@ class Rotation(object):
     inv
     __mul__
     __getitem__
-    copy
     """
     def __init__(self, quat, normalized=False, copy=True):
         self._single = False
@@ -685,14 +684,6 @@ class Rotation(object):
         """
         # __init__ now copies for all cases
         return self.__class__(self._quat[val], normalized=True)
-
-    def copy(self):
-        """Copy this object.
-
-        Returns a copy of this `Rotation` instance.
-        """
-        # __init__ now copies for all cases
-        return self.__class__(self.as_quaternion(), normalized=True)
 
 
 class Slerp(object):
