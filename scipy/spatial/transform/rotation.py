@@ -634,7 +634,7 @@ class Rotation(object):
         quat[:, -1] *= -1
         if self._single:
             quat = quat[0]
-        return self.__class__(quat, normalized=True)
+        return self.__class__(quat, normalized=True, copy=False)
 
     def __mul__(self, other):
         """Compose this rotation with the other.
