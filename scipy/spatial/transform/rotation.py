@@ -248,10 +248,9 @@ class Rotation(object):
             quaternions all have unit norm and are not normalized again.
             Default is False.
         copy : boolean, optional
-            Specifies behaviour when `normalized = True`. If `copy = False`,
-            then the input quaternions themselves are stored in the object.
-            Otherwise when `copy = True` a copy of the input quaternions is
-            stored. Default is `True`.
+            Specifies behaviour when `normalized = True`. If `copy = True`, a
+            copy of the input quaternions is stored in the object. If
+            `copy = False`, then the input itself is stored. Default is `True`.
         """
 
         return cls(quat, normalized, copy)
