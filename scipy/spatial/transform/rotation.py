@@ -419,9 +419,9 @@ class Rotation(object):
         quat[:, 3] = np.cos(norms / 2)
 
         if is_single:
-            return cls(quat[0], normalized=True)
+            return cls(quat[0], normalized=True, copy=False)
         else:
-            return cls(quat, normalized=True)
+            return cls(quat, normalized=True, copy=False)
 
     def as_rotvec(self):
         """Return the rotation vector representation of the Rotation.
