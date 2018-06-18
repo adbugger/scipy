@@ -662,7 +662,7 @@ class Rotation(object):
         result = _compose_quat(self._quat, other._quat)
         if self._single and other._single:
             result = result[0]
-        return self.__class__(result, normalized=True)
+        return self.__class__(result, normalized=True, copy=False)
 
     def apply(self, vectors, inverse=False):
         """Apply this rotation on a set of vectors.
