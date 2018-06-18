@@ -228,7 +228,7 @@ class Rotation(object):
             self._quat[~zero_norms] /= norms[~zero_norms][:, None]
 
     @classmethod
-    def from_quaternion(cls, quat, normalized=False):
+    def from_quaternion(cls, quat, normalized=False, copy=True):
         """Initialize Rotation from quaternions.
 
         This classmethod returns a `Rotation` object from the input quaternions
@@ -245,9 +245,13 @@ class Rotation(object):
             If this flag is `True`, then it is assumed that the input
             quaternions all have unit norm and are not normalized again.
             Default is False.
+        copy : boolean, optional
+            Specifies behaviour when `normalized = True`. If `copy = True`, a
+            copy of the input quaternions is stored in the object. If
+            `copy = False`, then the input itself is stored. Default is `True`.
         """
 
-        return cls(quat, normalized)
+        return cls(quat, normalized, copy)
 
     def as_quaternion(self):
         """Return the quaternion representation of the Rotation.
