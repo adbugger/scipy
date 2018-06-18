@@ -702,8 +702,8 @@ class Slerp(object):
     times : array_like, shape (N,)
         Times of the known rotations. At least 2 times must be specified.
     rotations : `Rotation` instance
-        `N` rotations to perform the interpolation between. At least 2
-        rotations must be specified.
+        Rotations to perform the interpolation between. Must contain N
+        rotations.
 
     Methods
     -------
