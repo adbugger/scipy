@@ -194,7 +194,7 @@ class Rotation(object):
     __getitem__
     copy
     """
-    def __init__(self, quat, normalized=False):
+    def __init__(self, quat, normalized=False, copy=True):
         self._single = False
         # Try to convert to numpy array
         quat = np.asarray(quat, dtype=float)
@@ -210,8 +210,10 @@ class Rotation(object):
             quat = quat[None, :]
             self._single = True
 
-        self._quat = quat.copy()
+        if normalized:
+            self._quat = quat.copy() if copy else quat
         if not normalized:
+            self._quat = quat.copy()
             # L2 norm of each row
             norms = scipy.linalg.norm(quat, axis=1)
 
@@ -226,7 +228,7 @@ class Rotation(object):
         self.num_rots = self._quat.shape[0]
 
     @classmethod
-    def from_quaternion(cls, quat, normalized=False):
+    def from_quaternion(cls, quat, normalized=False, copy=True):
         """Initialize Rotation from quaternions.
 
         This classmethod returns a `Rotation` object from the input quaternions
@@ -243,9 +245,14 @@ class Rotation(object):
             If this flag is `True`, then it is assumed that the input
             quaternions all have unit norm and are not normalized again.
             Default is False.
+        copy : boolean, optional
+            Specifies behaviour when `normalized = True`. If `copy = False`,
+            then the input quaternions themselves are stored in the object.
+            Otherwise when `copy = True` a copy of the input quaternions is
+            stored. Default is `True`.
         """
 
-        return cls(quat, normalized)
+        return cls(quat, normalized, copy)
 
     def as_quaternion(self):
         """Return the quaternion representation of the Rotation.
