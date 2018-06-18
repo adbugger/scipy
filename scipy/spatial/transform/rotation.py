@@ -658,20 +658,23 @@ class Rotation(object):
             result = result[0]
         return self.__class__(result, normalized=True)
 
-    def __getitem__(self, val):
+    def __getitem__(self, indexer):
         """Extract rotation at given index(es) from object.
 
         This function returns a new `Rotation` instance containing:
 
-            - a single rotation, if `val` is a single index
-            - a stack of rotation(s), if `val` is a slice, or an index array.
-              In cases where a single index is ultimately specified, the stack
-              will contain a single rotation.
+            - a single rotation, if `indexer` is a single index
+            - a stack of rotation(s), if `indexer` is a slice, or an index
+              array. In cases where a single index is ultimately specified, the
+              stack will contain a single rotation.
+
+        A single indexer must be specified. The semantics for this function are
+        identical to that of numpy arrays and lists.
 
         Parameters
         ----------
-        val : index, slice, or index array
-            This parameter specifies which rotation(s) to extract.
+        indexer : index, slice, or index array
+            Specifies which rotation(s) to extract.
         """
         # __init__ now copies for all cases
         return self.__class__(self._quat[val], normalized=True)
