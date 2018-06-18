@@ -369,9 +369,9 @@ class Rotation(object):
         quat /= np.linalg.norm(quat, axis=1)[:, None]
 
         if is_single:
-            return cls(quat[0], normalized=True)
+            return cls(quat[0], normalized=True, copy=False)
         else:
-            return cls(quat, normalized=True)
+            return cls(quat, normalized=True, copy=False)
 
     @classmethod
     def from_rotvec(cls, rotvec):
