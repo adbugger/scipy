@@ -722,6 +722,10 @@ def test_apply_multiple_rotations_multiple_points():
 
     assert_allclose(r.apply(v, inverse=True), v_inverse)
 
+    v_inverse = np.array([[2, -1, 3], [4, 6, -5]])
+
+    assert_allclose(r.apply(v, inverse=True), v_inverse)
+
 
 def test_getitem():
     dcm = np.empty((2, 3, 3))
