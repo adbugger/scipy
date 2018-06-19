@@ -622,37 +622,33 @@ def test_inv_single_rotation():
 
 
 def test_apply_single_rotation_single_point():
-    r_1d = Rotation.from_dcm([
+    dcm = np.array([
         [0, -1, 0],
         [1, 0, 0],
         [0, 0, 1]
     ])
-    r_2d = Rotation.from_dcm([[
-        [0, -1, 0],
-        [1, 0, 0],
-        [0, 0, 1]
-    ]])
+    r_1d = Rotation.from_dcm(dcm)
+    r_2d = Rotation.from_dcm(np.expand_dims(dcm, axis=0))
 
     v_1d = np.array([1, 2, 3])
-    v_2d = np.array([[1, 2, 3]])
+    v_2d = np.expand_dims(v_1d, axis=0)
+    v1d_rotated = np.array([-2, 1, 3])
+    v2d_rotated = np.expand_dims(v1d_rotated, axis=0)
 
-    assert_allclose(r_1d.apply(v_1d), np.array([-2, 1, 3]))
-    assert_allclose(r_1d.apply(v_2d), np.array([[-2, 1, 3]]))
-    assert_allclose(r_2d.apply(v_1d), np.array([[-2, 1, 3]]))
-    assert_allclose(r_2d.apply(v_2d), np.array([[-2, 1, 3]]))
+    assert_allclose(r_1d.apply(v_1d), v1d_rotated)
+    assert_allclose(r_1d.apply(v_2d), v2d_rotated)
+    assert_allclose(r_2d.apply(v_1d), v2d_rotated)
+    assert_allclose(r_2d.apply(v_2d), v2d_rotated)
 
 
 def test_apply_single_rotation_multiple_points():
-    r1 = Rotation.from_dcm([
+    dcm = np.array([
         [0, -1, 0],
         [1, 0, 0],
         [0, 0, 1]
     ])
-    r2 = Rotation.from_dcm([[
-            [0, -1, 0],
-            [1, 0, 0],
-            [0, 0, 1]
-        ]])
+    r1 = Rotation.from_dcm(dcm)
+    r2 = Rotation.from_dcm(np.expand_dims(dcm, axis=0))
 
     v = np.array([[1, 2, 3], [4, 5, 6]])
     v_rotated = np.array([[-2, 1, 3], [-5, 4, 6]])
@@ -676,7 +672,7 @@ def test_apply_multiple_rotations_single_point():
     r = Rotation.from_dcm(dcm)
 
     v1 = np.array([1, 2, 3])
-    v2 = np.array([[1, 2, 3]])
+    v2 = np.expand_dims(v1, axis=0)
 
     v_rotated = np.array([[-2, 1, 3], [1, -3, 2]])
 
