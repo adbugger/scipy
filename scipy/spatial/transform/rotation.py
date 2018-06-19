@@ -193,8 +193,9 @@ class Rotation(object):
     inv
     __mul__
     apply
+    __getitem__
     """
-    def __init__(self, quat, normalized=False):
+    def __init__(self, quat, normalized=False, copy=True):
         self._single = False
         # Try to convert to numpy array
         quat = np.asarray(quat, dtype=float)
@@ -211,7 +212,7 @@ class Rotation(object):
             self._single = True
 
         if normalized:
-            self._quat = quat
+            self._quat = quat.copy() if copy else quat
         else:
             self._quat = quat.copy()
             # L2 norm of each row
@@ -225,6 +226,11 @@ class Rotation(object):
             # Normalize each quaternion, ensuring norm is broadcasted along
             # each column.
             self._quat[~zero_norms] /= norms[~zero_norms][:, None]
+
+    @property
+    def n(self):
+        """Number of rotations contained in object."""
+        return self._quat.shape[0]
 
     @classmethod
     def from_quaternion(cls, quat, normalized=False):
@@ -364,9 +370,9 @@ class Rotation(object):
         quat /= np.linalg.norm(quat, axis=1)[:, None]
 
         if is_single:
-            return cls(quat[0], normalized=True)
+            return cls(quat[0], normalized=True, copy=False)
         else:
-            return cls(quat, normalized=True)
+            return cls(quat, normalized=True, copy=False)
 
     @classmethod
     def from_rotvec(cls, rotvec):
@@ -414,9 +420,9 @@ class Rotation(object):
         quat[:, 3] = np.cos(norms / 2)
 
         if is_single:
-            return cls(quat[0], normalized=True)
+            return cls(quat[0], normalized=True, copy=False)
         else:
-            return cls(quat, normalized=True)
+            return cls(quat, normalized=True, copy=False)
 
     def as_rotvec(self):
         """Return the rotation vector representation of the Rotation.
@@ -548,7 +554,7 @@ class Rotation(object):
                              "num_axes), got {}.".format(angles.shape))
 
         quat = _elementary_quat_compose(seq, angles, intrinsic)
-        return cls(quat[0] if is_single else quat, normalized=True)
+        return cls(quat[0] if is_single else quat, normalized=True, copy=False)
 
     def as_euler(self, seq, degrees=False):
         """Return the Euler angles representation of the Rotation.
@@ -629,7 +635,7 @@ class Rotation(object):
         quat[:, -1] *= -1
         if self._single:
             quat = quat[0]
-        return self.__class__(quat, normalized=True)
+        return self.__class__(quat, normalized=True, copy=False)
 
     def __mul__(self, other):
         """Compose this rotation with the other.
@@ -657,7 +663,7 @@ class Rotation(object):
         result = _compose_quat(self._quat, other._quat)
         if self._single and other._single:
             result = result[0]
-        return self.__class__(result, normalized=True)
+        return self.__class__(result, normalized=True, copy=False)
 
     def apply(self, vectors, inverse=False):
         """Apply this rotation on a set of vectors.
@@ -709,7 +715,7 @@ class Rotation(object):
             dcm = dcm[None, :, :]
 
         n_vectors = vectors.shape[0]
-        n_rotations = self._quat.shape[0]
+        n_rotations = self.n
 
         if n_vectors != 1 and n_rotations != 1 and n_vectors != n_rotations:
             raise ValueError("Expected equal numbers of rotations and vectors "
@@ -726,3 +732,23 @@ class Rotation(object):
             return result[0]
         else:
             return result
+
+    def __getitem__(self, indexer):
+        """Extract rotation at given index(es) from object.
+
+        This function returns a new `Rotation` instance containing:
+
+            - a single rotation, if `indexer` is a single index
+            - a stack of rotation(s), if `indexer` is a slice, or an index
+              array.
+
+        A single indexer must be specified, i.e. as if indexing a 1 dimensional
+        array or list.
+
+        Parameters
+        ----------
+        indexer : index, slice, or index array
+            Specifies which rotation(s) to extract.
+        """
+        # __init__ now copies by default
+        return self.__class__(self._quat[indexer], normalized=True)

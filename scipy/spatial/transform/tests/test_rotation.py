@@ -714,9 +714,53 @@ def test_apply_multiple_rotations_multiple_points():
 
     v = np.array([[1, 2, 3], [4, 5, 6]])
     v_rotated = np.array([[-2, 1, 3], [4, -6, 5]])
-
     assert_allclose(r.apply(v), v_rotated)
+    v_inverse = np.array([[2, -1, 3], [4, 6, -5]])
+    assert_allclose(r.apply(v, inverse=True), v_inverse)
 
     v_inverse = np.array([[2, -1, 3], [4, 6, -5]])
 
     assert_allclose(r.apply(v, inverse=True), v_inverse)
+
+    v_inverse = np.array([[2, -1, 3], [4, 6, -5]])
+
+    assert_allclose(r.apply(v, inverse=True), v_inverse)
+
+
+def test_getitem():
+    dcm = np.empty((2, 3, 3))
+    dcm[0] = np.array([
+        [0, -1, 0],
+        [1, 0, 0],
+        [0, 0, 1]
+    ])
+    dcm[1] = np.array([
+        [1, 0, 0],
+        [0, 0, -1],
+        [0, 1, 0]
+    ])
+    r = Rotation.from_dcm(dcm)
+
+    assert_allclose(r[0].as_dcm(), dcm[0])
+    assert_allclose(r[1].as_dcm(), dcm[1])
+    assert_allclose(r[:-1].as_dcm(), np.expand_dims(dcm[0], axis=0))
+
+
+def test_n_rotations():
+    dcm = np.empty((2, 3, 3))
+    dcm[0] = np.array([
+        [0, -1, 0],
+        [1, 0, 0],
+        [0, 0, 1]
+    ])
+    dcm[1] = np.array([
+        [1, 0, 0],
+        [0, 0, -1],
+        [0, 1, 0]
+    ])
+    r = Rotation.from_dcm(dcm)
+
+    assert_equal(r.n, 2)
+    assert_equal(r[0].n, 1)
+    assert_equal(r[1].n, 1)
+    assert_equal(r[:-1].n, 1)
