@@ -213,7 +213,7 @@ class Rotation(object):
 
         if normalized:
             self._quat = quat.copy() if copy else quat
-        if not normalized:
+        else:
             self._quat = quat.copy()
             # L2 norm of each row
             norms = scipy.linalg.norm(quat, axis=1)
@@ -743,11 +743,10 @@ class Rotation(object):
 
             - a single rotation, if `indexer` is a single index
             - a stack of rotation(s), if `indexer` is a slice, or an index
-              array. In cases where a single index is ultimately specified, the
-              stack will contain a single rotation.
+              array.
 
-        A single indexer must be specified. The semantics for this function are
-        identical to that of numpy arrays and lists.
+        A single indexer must be specified, i.e. as if indexing a 1 dimensional
+        array or list.
 
         Parameters
         ----------
