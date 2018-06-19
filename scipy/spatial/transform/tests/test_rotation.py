@@ -640,6 +640,14 @@ def test_apply_single_rotation_single_point():
     assert_allclose(r_2d.apply(v_1d), v2d_rotated)
     assert_allclose(r_2d.apply(v_2d), v2d_rotated)
 
+    v1d_inverse = np.array([2, -1, 3])
+    v2d_inverse = np.expand_dims(v1d_inverse, axis=0)
+
+    assert_allclose(r_1d.apply(v_1d, inverse=True), v1d_inverse)
+    assert_allclose(r_1d.apply(v_2d, inverse=True), v2d_inverse)
+    assert_allclose(r_2d.apply(v_1d, inverse=True), v2d_inverse)
+    assert_allclose(r_2d.apply(v_2d, inverse=True), v2d_inverse)
+
 
 def test_apply_single_rotation_multiple_points():
     dcm = np.array([
@@ -655,6 +663,11 @@ def test_apply_single_rotation_multiple_points():
 
     assert_allclose(r1.apply(v), v_rotated)
     assert_allclose(r2.apply(v), v_rotated)
+
+    v_inverse = np.array([[2, -1, 3], [5, -4, 6]])
+
+    assert_allclose(r1.apply(v, inverse=True), v_inverse)
+    assert_allclose(r2.apply(v, inverse=True), v_inverse)
 
 
 def test_apply_multiple_rotations_single_point():
@@ -679,6 +692,11 @@ def test_apply_multiple_rotations_single_point():
     assert_allclose(r.apply(v1), v_rotated)
     assert_allclose(r.apply(v2), v_rotated)
 
+    v_inverse = np.array([[2, -1, 3], [1, 3, -2]])
+
+    assert_allclose(r.apply(v1, inverse=True), v_inverse)
+    assert_allclose(r.apply(v2, inverse=True), v_inverse)
+
 
 def test_apply_multiple_rotations_multiple_points():
     dcm = np.empty((2, 3, 3))
@@ -698,3 +716,7 @@ def test_apply_multiple_rotations_multiple_points():
     v_rotated = np.array([[-2, 1, 3], [4, -6, 5]])
 
     assert_allclose(r.apply(v), v_rotated)
+
+    v_inverse = np.array([[2, -1, 3], [4, 6, -5]])
+
+    assert_allclose(r.apply(v, inverse=True), v_inverse)
