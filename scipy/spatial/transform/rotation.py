@@ -192,6 +192,7 @@ class Rotation(object):
     as_euler
     inv
     __mul__
+    apply
     """
     def __init__(self, quat, normalized=False):
         self._single = False
@@ -657,3 +658,71 @@ class Rotation(object):
         if self._single and other._single:
             result = result[0]
         return self.__class__(result, normalized=True)
+
+    def apply(self, vectors, inverse=False):
+        """Apply this rotation on a set of vectors.
+
+        Rotates `vectors` by the rotation(s) represented in the object.
+        If the original frame rotates to the final frame by this rotation, then
+        its application to a vector can be seen in two ways:
+
+            - As a projection of vector components expressed in the final frame
+              to the original frame.
+            - As the physical rotation of a vector being glued to the original
+              frame as it rotates. In this case the vector components are
+              expressed in the original frame before and after the rotation.
+
+        In terms of DCMs, this application is the same as
+        `self.as_dcm().dot(vectors)`.
+
+        The number of rotations and number of vectors given must follow
+        standard numpy broadcasting rules: either one of them equals unity or
+        they both equal each other.
+
+        Returns a `numpy.ndarray` of shape `(3,)` if object contains a single
+        rotation (as opposed to a stack with a single rotation) and a single
+        vector is specified with shape `(3,)`. In all other cases, the returned
+        array has shape `(N, 3)`, where `N` is either the number of rotations
+        or vectors.
+
+        Parameters
+        ----------
+        vectors : array_like, shape (3,) or (N, 3)
+            Each `vectors[i]` represents a vector in 3D space. A single vector
+            can either be specified with shape `(3, )` or `(1, 3)`.
+        inverse : boolean, optional
+            If `inverse` is `True` then the inverse of the rotation(s) is
+            applied to the input vectors. Default is `False`.
+        """
+        vectors = np.asarray(vectors)
+        if vectors.ndim > 2 or vectors.shape[-1] != 3:
+            raise ValueError("Expected input of shape (3,) or (P, 3), "
+                             "got {}.".format(vectors.shape))
+
+        single_vector = False
+        if vectors.shape == (3,):
+            single_vector = True
+            vectors = vectors[None, :]
+
+        dcm = self.as_dcm()
+        if self._single:
+            dcm = dcm[None, :, :]
+
+        n_vectors = vectors.shape[0]
+        n_rotations = self._quat.shape[0]
+
+        if n_vectors != 1 and n_rotations != 1 and n_vectors != n_rotations:
+            raise ValueError("Expected equal numbers of rotations and vectors "
+                             ", or a single rotation, or a single vector, got "
+                             "{} rotations and {} vectors.".format(
+                                n_rotations, n_vectors))
+
+        if inverse:
+            result = np.einsum('ikj,ik->ij', dcm, vectors)
+        else:
+            result = np.einsum('ijk,ik->ij', dcm, vectors)
+
+        if self._single and single_vector:
+            return result[0]
+        else:
+            return result
