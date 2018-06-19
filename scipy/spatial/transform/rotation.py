@@ -718,7 +718,7 @@ class Rotation(object):
             dcm = dcm[None, :, :]
 
         n_vectors = vectors.shape[0]
-        n_rotations = self._quat.shape[0]
+        n_rotations = self.n
 
         if n_vectors != 1 and n_rotations != 1 and n_vectors != n_rotations:
             raise ValueError("Expected equal numbers of rotations and vectors "
