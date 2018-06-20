@@ -701,10 +701,15 @@ class Rotation(object):
         return angles[0] if self._single else angles
 
     def inv(self):
-        """Returns the inverse of the current rotation.
+        """Invert this rotation.
 
-        This function returns a new `Rotation` instance containing the inverse
-        of all the rotations in the current instance.
+        Composition of a rotation with its inverse results in an identity
+        rotation, or no rotation.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Object containing inverse of the rotations in the current instance.
         """
         quat = self._quat.copy()
         quat[:, -1] *= -1
@@ -719,14 +724,25 @@ class Rotation(object):
         by p' is equivalent to `p * q`. In terms of DCMs, the composition can
         be expressed as `p.as_dcm().dot(q.as_dcm())`.
 
-        This function supports composition of multiple rotations at a time:
+        Parameters
+        ----------
+        other : `Rotation` instance
+            Object containing the rotaions to be composed with this one. Note
+            that rotation compositions are not commutative, so `p * q` is
+            different from `q * p`.
 
-            - Either `p` or `q` contains a single rotation. In this case the
-              returned object contains the result of composing each rotation in
-              the other object with the single rotation.
+        Returns
+        -------
+        output : `Rotation` instance
+            This function supports composition of multiple rotations at a time.
+            The following cases are possible:
+
+            - Either `p` or `q` contains a single rotation. In this case
+              `output` contains the result of composing each rotation in the
+              other object with the single rotation.
             - Both `p` and `q` contain `N` rotations. In this case each
-              rotation `p[i]` is composed with each rotation `q[i]` and the
-              returned object contains `N` rotations.
+              rotation `p[i]` is composed with the corresponding rotation
+              `q[i]` and `output` contains `N` rotations.
         """
         if not(self._quat.shape[0] == 1 or other._quat.shape[0] == 1 or
                self._quat.shape[0] == other._quat.shape[0]):
