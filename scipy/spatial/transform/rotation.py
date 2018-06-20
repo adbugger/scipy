@@ -171,13 +171,29 @@ def _elementary_quat_compose(seq, angles, intrinsic=False):
 
 
 class Rotation(object):
-    """Rotation in 3 dimensions.
+    """Rotation transform in 3 dimensions.
 
-    This class will include initializers from, and converters to different
-    representations, rotation compositions and applications.
 
-    For initializing Rotations usage of `from_...` methods such as
-    `from_quaternion` is recommended instead of using `__init__`.
+    This class provides an interface to initialize from and represent rotations
+    using the following:
+
+        - Quaternions
+        - Direction Cosine Matrices
+        - Rotation Vectors
+        - Euler angles
+
+    The following operations on rotations are supported:
+
+        - Application on vectors
+        - Rotation Composition
+        - Rotation Inversion
+        - Rotation Indexing
+
+    Indexing within a rotation is supported since multiple rotation transforms
+    can be stored within a single `Rotation` instance.
+
+    Initialization using the `from_...` classmethods such as `from_quaternion`
+    is recommended over using `__init__`.
 
     Methods
     -------
@@ -189,8 +205,10 @@ class Rotation(object):
     as_rotvec
     from_euler
     as_euler
-    inv
+    apply
     __mul__
+    inv
+    __len__
     __getitem__
     """
     def __init__(self, quat, normalized=False, copy=True):
@@ -211,7 +229,7 @@ class Rotation(object):
 
         if normalized:
             self._quat = quat.copy() if copy else quat
-        if not normalized:
+        else:
             self._quat = quat.copy()
             # L2 norm of each row
             norms = scipy.linalg.norm(quat, axis=1)
@@ -225,19 +243,23 @@ class Rotation(object):
             # each column.
             self._quat[~zero_norms] /= norms[~zero_norms][:, None]
 
-    @property
-    def n(self):
-        """Number of rotations contained in object."""
+    def __len__(self):
+        """Number of rotations contained in this object.
+
+        Multiple rotations can be stored in a single instance.
+
+        Returns
+        -------
+        length : int
+            Number of rotations stored in object.
+        """
         return self._quat.shape[0]
 
     @classmethod
-    def from_quaternion(cls, quat, normalized=False, copy=True):
+    def from_quaternion(cls, quat, normalized=False):
         """Initialize Rotation from quaternions.
 
-        This classmethod returns a `Rotation` object from the input quaternions
-        If `normalized` is `True`, then the quaternions are assumed to have
-        unit norm, else the quaternions are normalized before the object is
-        created.
+        3D rotations can be represented using unit-norm quaternions [1]_.
 
         Parameters
         ----------
@@ -245,22 +267,40 @@ class Rotation(object):
             Each row is a (possibly non-unit norm) quaternion in scalar-last
             (x, y, z, w) format.
         normalized : boolean, optional
-            If this flag is `True`, then it is assumed that the input
-            quaternions all have unit norm and are not normalized again.
-            Default is False.
-        copy : boolean, optional
-            Specifies behaviour when `normalized = True`. If `copy = True`, a
-            copy of the input quaternions is stored in the object. If
-            `copy = False`, then the input itself is stored. Default is `True`.
+            If `False`, input quaternions are normalized to unit norm before
+            being stored. If `True`, quaternions are assumed to already have
+            unit norm and are stored as given. Default is `False`.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Object containing the rotations represented by input quaternions.
+
+        References
+        ----------
+        .. [1] `Quaternions and Spatial Rotation
+               <https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation>`_
         """
 
-        return cls(quat, normalized, copy)
+        return cls(quat, normalized)
 
     def as_quaternion(self):
-        """Return the quaternion representation of the Rotation.
+        """Represent rotations as quaternions.
 
-        This function returns a numpy array of shape (4,) or (N x 4) depending
-        on the input that was used to initialize the object.
+        Rotations in 3 dimensions can be represented using unit norm
+        quaternions [1]_. The mapping from quaternions to rotations is
+        two-to-one, i.e. a quaternion and its additive inverse represent the
+        same spatial rotation.
+
+        Returns
+        -------
+        output : `numpy.ndarray`, shape (4,) or (N, 4)
+            Shape depends on shape of inputs used for initialization.
+
+        References
+        ----------
+        .. [1] `Quaternions and Spatial Rotation
+               <https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation>`_
         """
         if self._single:
             return self._quat[0].copy()
@@ -268,10 +308,15 @@ class Rotation(object):
             return self._quat.copy()
 
     def as_dcm(self):
-        """Return the direction cosine matrix representation of the Rotation.
+        """Represent rotations as direction cosine matrices.
 
-        This function returns a numpy.ndarray of shape (3, 3) or (N, 3, 3)
-        depending on the input that was used to initialize the object.
+        3D rotations can be represented using direction cosine matrices, which
+        are 3 x 3 real orthogonal matrices with eigenvalue equal to +1.
+
+        Returns
+        -------
+        output : `numpy.ndarray`, shape (3, 3) or (N, 3, 3)
+            Shape depends on shape of inputs used for initialization.
         """
 
         x = self._quat[:, 0]
@@ -313,17 +358,23 @@ class Rotation(object):
 
     @classmethod
     def from_dcm(cls, dcm):
-        """Initialize rotation from direction cosine matrix.
+        """Initialize Rotation from direction cosine matrix.
 
-        This classmethod return a `Rotation` object from the input direction
-        cosine matrices. If the input matrix is not orthogonal, this method
-        creates an approximation using the algorithm described in [1]_.
+        Rotations in 3 dimensions can be represented using 3 x 3 proper
+        orthogonal matrices. If the input is not proper orthogonal,
+        an approximation is created using the method described in [1]_.
 
         Parameters
         ----------
         dcm : array_like, shape (N, 3, 3) or (3, 3)
             A single matrix or a stack of matrices, where `dcm[i]` is the i-th
             matrix.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Object containing the rotations represented by the input direction
+            cosine matrices.
 
         References
         ----------
@@ -389,6 +440,12 @@ class Rotation(object):
         rotvec : array_like, shape (N, 3) or (3,)
             A single vector or a stack of vectors, where `rot_vec[i]` gives
             the ith rotation vector.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Object containing the rotations represented by input rotation
+            vectors.
         """
         is_single = False
         rotvec = np.asarray(rotvec, dtype=float)
@@ -427,14 +484,16 @@ class Rotation(object):
             return cls(quat, normalized=True, copy=False)
 
     def as_rotvec(self):
-        """Return the rotation vector representation of the Rotation.
-
-        This function returns a numpy.ndarray of shape (3,) or (N, 3)
-        depending on the input that was used to initialize the object.
+        """Represent rotations as rotation vectors.
 
         A rotation vector is a 3 dimensional vector which is co-directional to
         the axis of rotation and whose norm gives the angle of rotation (in
         radians).
+
+        Returns
+        -------
+        output : `numpy.ndarray`, shape (3,) or (N, 3)
+            Shape depends on shape of inputs used for initialization.
         """
         quat = self._quat.copy()
         # w > 0 to ensure 0 <= angle <= pi
@@ -464,13 +523,22 @@ class Rotation(object):
     def from_euler(cls, seq, angles, degrees=False):
         """Initialize rotation from Euler angles.
 
+        Rotations in 3 dimensions can be represented by a sequece of 3
+        rotations around a sequence of axes. In theory, any three axes spanning
+        the 3D Euclidean space are enough. In practice the axes of rotation are
+        chosen to be the basis vectors.
+
+        The three rotations can either be in a global frame of reference
+        (extrinsic) or in a body centred frame of refernce (intrinsic), which
+        is attached to, and moves with, the object under rotation [1]_.
+
         Parameters
         ----------
         seq : string
-            Up to 3 characters belonging to the set {'X', 'Y', 'Z'} for
-            intrinsic rotations, or {'x', 'y', 'z'} for extrinsic
-            rotations [1]_. Extrinsic and intrinsic rotations cannot be mixed
-            in one function call.
+            Specifies sequence of axes for rotations. Up to 3 characters
+            belonging to the set {'X', 'Y', 'Z'} for intrinsic rotations, or
+            {'x', 'y', 'z'} for extrinsic rotations. Extrinsic and intrinsic
+            rotations cannot be mixed in one function call.
         angles : float or array_like, shape (N,) or (N, [1 or 2 or 3])
             Euler angles specified in radians (`degrees` is False) or degrees
             (`degrees` is True).
@@ -491,8 +559,14 @@ class Rotation(object):
                   rotation
 
         degrees : boolean, optional
-            If True, then the given angles are taken to be in degrees. Default
-            is False.
+            If True, then the given angles are assumed to be in degrees.
+            Default is False.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Object containing the rotation represented by the sequence of
+            rotations around given axes with given angles.
 
         References
         ----------
@@ -559,27 +633,21 @@ class Rotation(object):
         return cls(quat[0] if is_single else quat, normalized=True, copy=False)
 
     def as_euler(self, seq, degrees=False):
-        """Return the Euler angles representation of the Rotation.
+        """Compute Euler angles for rotations with specified axis sequence.
 
-        This function returns a numpy.ndarray of shape (N, 3) or (3,) depending
-        on how the object was initialized. The algorithm presented in [2]_ has
-        been adapted for our use to extract Euler angles. The paper presents an
-        algorithm for extracting Euler angles from transformation matrices, as
-        opposed to rotation matrices. Thus, the matrix representation used in
-        the paper is a transpose of the direction cosine matrix representation
-        returned by the `as_dcm` function.
+        Euler angles can be extracted for any set of 3 mutually perpendicular
+        axes. This paper [2]_ presents such a general algorithm for extracting
+        Euler angles from transformation matrices, as opposed to rotation
+        matrices. Thus, the matrix representation used in the paper is a
+        transpose of the direction cosine matrix representation given by the
+        `as_dcm` function.
 
-        The returned angles are in the range:
+        The algorithm has been adapted to use rotation matrices and extended
+        to calculate Euler angles for intrinsic as well as extrinsic rotations.
 
-            - First angle belongs to [-180, 180] degrees (both inclusive)
-            - Third angle belongs to [-180, 180] degrees (both inclusive)
-            - Second angle belongs to:
-
-                - [-90, 90] degrees if all axes are different (like xyz)
-                - [0, 180] degrees if first and third axes are the same
-                  (like zxz)
-
-        Euler angles suffer from the problem of gimbal lock [3]_. In this case,
+        Euler angles suffer from the problem of gimbal lock [3]_, where the
+        representation loses a degree of freedom and it is not possible to
+        represent the first and third angles uniquely. In this case,
         a warning is raised, and the third angle is set to zero. Note however
         that the returned angles still represent the correct rotation.
 
@@ -594,6 +662,21 @@ class Rotation(object):
         degrees : boolean, optional
             Returned angles are in degrees if this flag is True, else they are
             in radians. Default is False.
+
+        Returns
+        -------
+        angles : `numpy.ndarray`, shape (3,) or (N, 3)
+            Shape depends on shape of inputs used to initialize object.
+
+            The returned angles are in the range:
+
+                - First angle belongs to [-180, 180] degrees (both inclusive)
+                - Third angle belongs to [-180, 180] degrees (both inclusive)
+                - Second angle belongs to:
+
+                    - [-90, 90] degrees if all axes are different (like xyz)
+                    - [0, 180] degrees if first and third axes are the same
+                      (like zxz)
 
         References
         ----------
@@ -628,10 +711,15 @@ class Rotation(object):
         return angles[0] if self._single else angles
 
     def inv(self):
-        """Returns the inverse of the current rotation.
+        """Invert this rotation.
 
-        This function returns a new `Rotation` instance containing the inverse
-        of all the rotations in the current instance.
+        Composition of a rotation with its inverse results in an identity
+        rotation, or no rotation.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Object containing inverse of the rotations in the current instance.
         """
         quat = self._quat.copy()
         quat[:, -1] *= -1
@@ -646,14 +734,25 @@ class Rotation(object):
         by p' is equivalent to `p * q`. In terms of DCMs, the composition can
         be expressed as `p.as_dcm().dot(q.as_dcm())`.
 
-        This function supports composition of multiple rotations at a time:
+        Parameters
+        ----------
+        other : `Rotation` instance
+            Object containing the rotaions to be composed with this one. Note
+            that rotation compositions are not commutative, so `p * q` is
+            different from `q * p`.
 
-            - Either `p` or `q` contains a single rotation. In this case the
-              returned object contains the result of composing each rotation in
-              the other object with the single rotation.
+        Returns
+        -------
+        output : `Rotation` instance
+            This function supports composition of multiple rotations at a time.
+            The following cases are possible:
+
+            - Either `p` or `q` contains a single rotation. In this case
+              `output` contains the result of composing each rotation in the
+              other object with the single rotation.
             - Both `p` and `q` contain `N` rotations. In this case each
-              rotation `p[i]` is composed with each rotation `q[i]` and the
-              returned object contains `N` rotations.
+              rotation `p[i]` is composed with the corresponding rotation
+              `q[i]` and `output` contains `N` rotations.
         """
         if not(self._quat.shape[0] == 1 or other._quat.shape[0] == 1 or
                self._quat.shape[0] == other._quat.shape[0]):
@@ -667,27 +766,101 @@ class Rotation(object):
             result = result[0]
         return self.__class__(result, normalized=True, copy=False)
 
+    def apply(self, vectors, inverse=False):
+        """Apply this rotation on a set of vectors.
+
+        Rotates `vectors` by the rotation(s) represented in the object.
+
+        If the original frame rotates to the final frame by this rotation, then
+        its application to a vector can be seen in two ways:
+
+            - As a projection of vector components expressed in the final frame
+              to the original frame.
+            - As the physical rotation of a vector being glued to the original
+              frame as it rotates. In this case the vector components are
+              expressed in the original frame before and after the rotation.
+
+        In terms of DCMs, this application is the same as
+        `self.as_dcm().dot(vectors)`.
+
+        Parameters
+        ----------
+        vectors : array_like, shape (3,) or (N, 3)
+            Each `vectors[i]` represents a vector in 3D space. A single vector
+            can either be specified with shape `(3, )` or `(1, 3)`. The number
+            of rotations and number of vectors given must follow standard numpy
+            broadcasting rules: either one of them equals unity or they both
+            equal each other.
+        inverse : boolean, optional
+            If `inverse` is `True` then the inverse of the rotation(s) is
+            applied to the input vectors. Default is `False`.
+
+        Returns
+        -------
+        output : `numpy.ndarray`, shape (3,) or (N, 3)
+            Shape depends on the following cases:
+
+                - If object contains a single rotation (as opposed to a stack
+                  with a single rotation) and a single vector is specified with
+                  shape `(3,)`, then `output` has shape `(3,)`.
+                - In all other cases, `output` has shape `(N, 3)`, where `N` is
+                  either the number of rotations or vectors.
+        """
+        vectors = np.asarray(vectors)
+        if vectors.ndim > 2 or vectors.shape[-1] != 3:
+            raise ValueError("Expected input of shape (3,) or (P, 3), "
+                             "got {}.".format(vectors.shape))
+
+        single_vector = False
+        if vectors.shape == (3,):
+            single_vector = True
+            vectors = vectors[None, :]
+
+        dcm = self.as_dcm()
+        if self._single:
+            dcm = dcm[None, :, :]
+
+        n_vectors = vectors.shape[0]
+        n_rotations = len(self)
+
+        if n_vectors != 1 and n_rotations != 1 and n_vectors != n_rotations:
+            raise ValueError("Expected equal numbers of rotations and vectors "
+                             ", or a single rotation, or a single vector, got "
+                             "{} rotations and {} vectors.".format(
+                                n_rotations, n_vectors))
+
+        if inverse:
+            result = np.einsum('ikj,ik->ij', dcm, vectors)
+        else:
+            result = np.einsum('ijk,ik->ij', dcm, vectors)
+
+        if self._single and single_vector:
+            return result[0]
+        else:
+            return result
+
     def __getitem__(self, indexer):
-        """Extract rotation at given index(es) from object.
+        """Extract rotation(s) at given index(es) from object.
 
-        This function returns a new `Rotation` instance containing:
-
-            - a single rotation, if `indexer` is a single index
-            - a stack of rotation(s), if `indexer` is a slice, or an index
-              array. In cases where a single index is ultimately specified, the
-              stack will contain a single rotation.
-
-        A single indexer must be specified. The semantics for this function are
-        identical to that of numpy arrays and lists.
+        Create a new `Rotation` instance containing a subset of rotations
+        stored in this object.
 
         Parameters
         ----------
         indexer : index, slice, or index array
-            Specifies which rotation(s) to extract.
+            Specifies which rotation(s) to extract. A single indexer must be
+            specified, i.e. as if indexing a 1 dimensional array or list.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            `output` contains
+                - a single rotation, if `indexer` is a single index
+                - a stack of rotation(s), if `indexer` is a slice, or and index
+                  array.
         """
         # __init__ now copies by default
         return self.__class__(self._quat[indexer], normalized=True)
-
 
 class Slerp(object):
     """Spherical Linear Interpolation of Rotations.
