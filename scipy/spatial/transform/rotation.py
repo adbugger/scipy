@@ -249,10 +249,7 @@ class Rotation(object):
     def from_quaternion(cls, quat, normalized=False):
         """Initialize Rotation from quaternions.
 
-        This classmethod returns a `Rotation` object from the input quaternions
-        If `normalized` is `True`, then the quaternions are assumed to have
-        unit norm, else the quaternions are normalized before the object is
-        created.
+        3D rotations can be represented using unit-norm quaternions [1]_.
 
         Parameters
         ----------
@@ -260,9 +257,19 @@ class Rotation(object):
             Each row is a (possibly non-unit norm) quaternion in scalar-last
             (x, y, z, w) format.
         normalized : boolean, optional
-            If this flag is `True`, then it is assumed that the input
-            quaternions all have unit norm and are not normalized again.
-            Default is False.
+            If `False`, input quaternions are normalized to unit norm before
+            being stored. If `True`, quaternions are assumed to already have
+            unit norm and are stored as given. Default is `False`.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Object containing the rotations represented by input quaternions.
+
+        References
+        ----------
+        .. [1] `Quaternions and Spatial Rotation
+               <https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation>`_
         """
 
         return cls(quat, normalized)
