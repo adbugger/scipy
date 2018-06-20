@@ -285,9 +285,7 @@ class Rotation(object):
         Returns
         -------
         output : `numpy.ndarray`, shape (4,) or (N, 4)
-            Shape depends on shape of inputs used for initialization. `output`
-            is a copy of the quaternion array stored internally and can be
-            modified in place without corrupting object.
+            Shape depends on shape of inputs used for initialization.
 
         References
         ----------
