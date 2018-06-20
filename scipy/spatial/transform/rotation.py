@@ -207,6 +207,7 @@ class Rotation(object):
     apply
     __mul__
     inv
+    __len__
     __getitem__
     """
     def __init__(self, quat, normalized=False, copy=True):
@@ -242,7 +243,15 @@ class Rotation(object):
             self._quat[~zero_norms] /= norms[~zero_norms][:, None]
 
     def __len__(self):
-        """Number of rotations contained in object."""
+        """Number of rotations contained in this object.
+
+        Multiple rotations can be stored in a single instance.
+
+        Returns
+        -------
+        length : int
+            Number of rotations stored in object.
+        """
         return self._quat.shape[0]
 
     @classmethod
@@ -554,7 +563,7 @@ class Rotation(object):
 
         Returns
         -------
-        output : Rotation instance
+        output : `Rotation` instance
             Object containing the rotation represented by the sequence of
             rotations around given axes with given angles.
 
