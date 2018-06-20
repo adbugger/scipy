@@ -430,6 +430,12 @@ class Rotation(object):
         rotvec : array_like, shape (N, 3) or (3,)
             A single vector or a stack of vectors, where `rot_vec[i]` gives
             the ith rotation vector.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Object containing the rotations represented by input rotation
+            vectors.
         """
         is_single = False
         rotvec = np.asarray(rotvec, dtype=float)
@@ -468,14 +474,16 @@ class Rotation(object):
             return cls(quat, normalized=True, copy=False)
 
     def as_rotvec(self):
-        """Return the rotation vector representation of the Rotation.
-
-        This function returns a numpy.ndarray of shape (3,) or (N, 3)
-        depending on the input that was used to initialize the object.
+        """Represent rotations as rotation vectors.
 
         A rotation vector is a 3 dimensional vector which is co-directional to
         the axis of rotation and whose norm gives the angle of rotation (in
         radians).
+
+        Returns
+        -------
+        output : `numpy.ndarray`, shape (3,) or (N, 3)
+            Shape depends on shape of inputs used for initialization.
         """
         quat = self._quat.copy()
         # w > 0 to ensure 0 <= angle <= pi
