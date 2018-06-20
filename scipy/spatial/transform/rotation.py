@@ -513,13 +513,22 @@ class Rotation(object):
     def from_euler(cls, seq, angles, degrees=False):
         """Initialize rotation from Euler angles.
 
+        Rotations in 3 dimensions can be represented by a sequece of 3
+        rotations around a sequence of axes. In theory, any three axes spanning
+        the 3D Euclidean space are enough. In practice the axes of rotation are
+        chosen to be the basis vectors.
+
+        The three rotations can either be in a global frame of reference
+        (extrinsic) or in a body centred frame of refernce (intrinsic), which
+        is attached to, and moves with, the object under rotation [1]_.
+
         Parameters
         ----------
         seq : string
-            Up to 3 characters belonging to the set {'X', 'Y', 'Z'} for
-            intrinsic rotations, or {'x', 'y', 'z'} for extrinsic
-            rotations [1]_. Extrinsic and intrinsic rotations cannot be mixed
-            in one function call.
+            Specifies sequence of axes for rotations. Up to 3 characters
+            belonging to the set {'X', 'Y', 'Z'} for intrinsic rotations, or
+            {'x', 'y', 'z'} for extrinsic rotations. Extrinsic and intrinsic
+            rotations cannot be mixed in one function call.
         angles : float or array_like, shape (N,) or (N, [1 or 2 or 3])
             Euler angles specified in radians (`degrees` is False) or degrees
             (`degrees` is True).
@@ -540,8 +549,14 @@ class Rotation(object):
                   rotation
 
         degrees : boolean, optional
-            If True, then the given angles are taken to be in degrees. Default
-            is False.
+            If True, then the given angles are assumed to be in degrees.
+            Default is False.
+
+        Returns
+        -------
+        output : Rotation instance
+            Object containing the rotation represented by the sequence of
+            rotations around given axes with given angles.
 
         References
         ----------
@@ -608,27 +623,21 @@ class Rotation(object):
         return cls(quat[0] if is_single else quat, normalized=True, copy=False)
 
     def as_euler(self, seq, degrees=False):
-        """Return the Euler angles representation of the Rotation.
+        """Compute Euler angles for rotations with specified axis sequence.
 
-        This function returns a numpy.ndarray of shape (N, 3) or (3,) depending
-        on how the object was initialized. The algorithm presented in [2]_ has
-        been adapted for our use to extract Euler angles. The paper presents an
-        algorithm for extracting Euler angles from transformation matrices, as
-        opposed to rotation matrices. Thus, the matrix representation used in
-        the paper is a transpose of the direction cosine matrix representation
-        returned by the `as_dcm` function.
+        Euler angles can be extracted for any set of 3 mutually perpendicular
+        axes. This paper [2]_ presents such a general algorithm for extracting
+        Euler angles from transformation matrices, as opposed to rotation
+        matrices. Thus, the matrix representation used in the paper is a
+        transpose of the direction cosine matrix representation given by the
+        `as_dcm` function.
 
-        The returned angles are in the range:
+        The algorithm has been adapted to use rotation matrices and extended
+        to calculate Euler angles for intrinsic as well as extrinsic rotations.
 
-            - First angle belongs to [-180, 180] degrees (both inclusive)
-            - Third angle belongs to [-180, 180] degrees (both inclusive)
-            - Second angle belongs to:
-
-                - [-90, 90] degrees if all axes are different (like xyz)
-                - [0, 180] degrees if first and third axes are the same
-                  (like zxz)
-
-        Euler angles suffer from the problem of gimbal lock [3]_. In this case,
+        Euler angles suffer from the problem of gimbal lock [3]_, where the
+        representation loses a degree of freedom and it is not possible to
+        represent the first and third angles uniquely. In this case,
         a warning is raised, and the third angle is set to zero. Note however
         that the returned angles still represent the correct rotation.
 
@@ -643,6 +652,21 @@ class Rotation(object):
         degrees : boolean, optional
             Returned angles are in degrees if this flag is True, else they are
             in radians. Default is False.
+
+        Returns
+        -------
+        angles : `numpy.ndarray`, shape (3,) or (N, 3)
+            Shape depends on shape of inputs used to initialize object.
+
+            The returned angles are in the range:
+
+                - First angle belongs to [-180, 180] degrees (both inclusive)
+                - Third angle belongs to [-180, 180] degrees (both inclusive)
+                - Second angle belongs to:
+
+                    - [-90, 90] degrees if all axes are different (like xyz)
+                    - [0, 180] degrees if first and third axes are the same
+                      (like zxz)
 
         References
         ----------
