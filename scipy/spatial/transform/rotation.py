@@ -760,6 +760,7 @@ class Rotation(object):
         """Apply this rotation on a set of vectors.
 
         Rotates `vectors` by the rotation(s) represented in the object.
+
         If the original frame rotates to the final frame by this rotation, then
         its application to a vector can be seen in two ways:
 
@@ -772,24 +773,28 @@ class Rotation(object):
         In terms of DCMs, this application is the same as
         `self.as_dcm().dot(vectors)`.
 
-        The number of rotations and number of vectors given must follow
-        standard numpy broadcasting rules: either one of them equals unity or
-        they both equal each other.
-
-        Returns a `numpy.ndarray` of shape `(3,)` if object contains a single
-        rotation (as opposed to a stack with a single rotation) and a single
-        vector is specified with shape `(3,)`. In all other cases, the returned
-        array has shape `(N, 3)`, where `N` is either the number of rotations
-        or vectors.
-
         Parameters
         ----------
         vectors : array_like, shape (3,) or (N, 3)
             Each `vectors[i]` represents a vector in 3D space. A single vector
-            can either be specified with shape `(3, )` or `(1, 3)`.
+            can either be specified with shape `(3, )` or `(1, 3)`. The number
+            of rotations and number of vectors given must follow standard numpy
+            broadcasting rules: either one of them equals unity or they both
+            equal each other.
         inverse : boolean, optional
             If `inverse` is `True` then the inverse of the rotation(s) is
             applied to the input vectors. Default is `False`.
+
+        Returns
+        -------
+        output : `numpy.ndarray`, shape (3,) or (N, 3)
+            Shape depends on the following cases:
+
+                - If object contains a single rotation (as opposed to a stack
+                  with a single rotation) and a single vector is specified with
+                  shape `(3,)`, then `output` has shape `(3,)`.
+                - In all other cases, `output` has shape `(N, 3)`, where `N` is
+                  either the number of rotations or vectors.
         """
         vectors = np.asarray(vectors)
         if vectors.ndim > 2 or vectors.shape[-1] != 3:
