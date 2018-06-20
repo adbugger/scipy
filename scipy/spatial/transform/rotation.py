@@ -889,7 +889,7 @@ class Slerp(object):
             <https://en.wikipedia.org/wiki/Slerp#Quaternion_Slerp>`_
     """
     def __init__(self, times, rotations):
-        if rotations.n == 1:
+        if len(rotations) == 1:
             raise ValueError("`rotations` must contain at least 2 rotations.")
 
         times = np.asarray(times)
@@ -898,11 +898,11 @@ class Slerp(object):
                              "dimensional array, got {} "
                              "dimensions.".format(times.ndim))
 
-        if times.shape[0] != rotations.n:
+        if times.shape[0] != len(rotations):
             raise ValueError("Expected number of rotations to be equal to "
                              "number of timestamps given, got {} rotations "
                              "and {} timestamps.".format(
-                                rotations.n, times.shape[0]))
+                                len(rotations), times.shape[0]))
         self.times = times
         self.timedelta = np.diff(times)
 
@@ -936,7 +936,7 @@ class Slerp(object):
         ind[compute_times == self.times[0]] = 0
         # self.num_rots = number of rotations in self.rots, not number of
         # rotations in original object
-        if np.any(np.logical_or(ind < 0, ind > self.rotations.n - 1)):
+        if np.any(np.logical_or(ind < 0, ind > len(self.rotations) - 1)):
             raise ValueError("Interpolation times must be within the range "
                              "[{}, {}], both inclusive.".format(
                                 self.times[0], self.times[-1]))
