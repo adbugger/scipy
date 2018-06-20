@@ -171,14 +171,28 @@ def _elementary_quat_compose(seq, angles, intrinsic=False):
 
 
 class Rotation(object):
-    """Rotation in 3 dimensions.
+    """Rotation transform in 3 dimensions.
 
-    This class will include initializers from different representations,
-    converters and some useful algorithms such as quaternion slerp and
-    rotation estimation.
+    This class provides an interface to initialize from and represent rotations
+    using the following:
 
-    For initializing Rotations usage of `from_...` methods such as
-    `from_quaternion` is recommended instead of using `__init__`.
+        - Quaternions
+        - Direction Cosine Matrices
+        - Rotation Vectors
+        - Euler angles
+
+    The following operations on rotations are supported:
+
+        - Application on vectors
+        - Rotation Composition
+        - Rotation Inversion
+        - Rotation Indexing
+
+    Indexing within a rotation is supported since multiple rotation transforms
+    can be stored within a single `Rotation` instance.
+
+    Initialization using the `from_...` classmethods such as `from_quaternion`
+    is recommended over using `__init__`.
 
     Methods
     -------
@@ -190,9 +204,9 @@ class Rotation(object):
     as_rotvec
     from_euler
     as_euler
-    inv
-    __mul__
     apply
+    __mul__
+    inv
     __getitem__
     """
     def __init__(self, quat, normalized=False, copy=True):
