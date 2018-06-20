@@ -862,6 +862,7 @@ class Rotation(object):
         # __init__ now copies by default
         return self.__class__(self._quat[indexer], normalized=True)
 
+
 class Slerp(object):
     """Spherical Linear Interpolation of Rotations.
 

@@ -778,7 +778,7 @@ def test_quat_ownership():
 
     r._quat[0] = np.array([0, -1, 0, 0])
     assert_allclose(s._quat[0], np.array([1, 0, 0, 0]))
-    
+
 
 def test_slerp():
     np.random.seed(0)
