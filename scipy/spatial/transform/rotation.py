@@ -275,11 +275,24 @@ class Rotation(object):
         return cls(quat, normalized)
 
     def as_quaternion(self):
-        """Return the quaternion representation of the Rotation.
+        """Represent rotation as quaternions.
 
-        Returns a copy of the quaternions stored internally in a numpy array of
-        shape (4,) or (N x 4) depending on the input that was used to
-        initialize the object.
+        Rotations in 3 dimensions can be represented using unit norm
+        quaternions [1]_. The mapping from quaternions to rotations is
+        two-to-one, i.e. a quaternion and its additive inverse represent the
+        same spatial rotation.
+
+        Returns
+        -------
+        output : `numpy.ndarray`, shape (4,) or (N, 4)
+            Shape depends on shape of inputs used for initialization. `output`
+            is a copy of the quaternion array stored internally and can be
+            modified in place without corrupting object.
+
+        References
+        ----------
+        .. [1] `Quaternions and Spatial Rotation
+               <https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation>`_
         """
         if self._single:
             return self._quat[0].copy()
