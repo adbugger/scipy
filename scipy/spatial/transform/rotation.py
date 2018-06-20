@@ -275,7 +275,7 @@ class Rotation(object):
         return cls(quat, normalized)
 
     def as_quaternion(self):
-        """Represent rotation as quaternions.
+        """Represent rotations as quaternions.
 
         Rotations in 3 dimensions can be represented using unit norm
         quaternions [1]_. The mapping from quaternions to rotations is
@@ -300,10 +300,15 @@ class Rotation(object):
             return self._quat.copy()
 
     def as_dcm(self):
-        """Return the direction cosine matrix representation of the Rotation.
+        """Represent rotations as direction cosine matrices.
 
-        This function returns a numpy.ndarray of shape (3, 3) or (N, 3, 3)
-        depending on the input that was used to initialize the object.
+        3D rotations can be represented using direction cosine matrices, which
+        are 3 x 3 real orthogonal matrices with eigenvalue equal to +1.
+
+        Returns
+        -------
+        output : `numpy.ndarray`, shape (3, 3) or (N, 3, 3)
+            Shape depends on shape of inputs used for initialization.
         """
 
         x = self._quat[:, 0]
@@ -345,17 +350,23 @@ class Rotation(object):
 
     @classmethod
     def from_dcm(cls, dcm):
-        """Initialize rotation from direction cosine matrix.
+        """Initialize Rotation from direction cosine matrix.
 
-        This classmethod return a `Rotation` object from the input direction
-        cosine matrices. If the input matrix is not orthogonal, this method
-        creates an approximation using the algorithm described in [1]_.
+        Rotations in 3 dimensions can be represented using 3 x 3 proper
+        orthogonal matrices. If the input is not proper orthogonal,
+        an approximation is created using the method described in [1]_.
 
         Parameters
         ----------
         dcm : array_like, shape (N, 3, 3) or (3, 3)
             A single matrix or a stack of matrices, where `dcm[i]` is the i-th
             matrix.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Object containing the rotations represented by the input direction
+            cosine matrices.
 
         References
         ----------
