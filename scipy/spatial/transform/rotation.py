@@ -188,6 +188,7 @@ class Rotation(object):
         - Rotation Composition
         - Rotation Inversion
         - Rotation Indexing
+        - Random sampling
 
     Indexing within a rotation is supported since multiple rotation transforms
     can be stored within a single `Rotation` instance.
@@ -210,6 +211,7 @@ class Rotation(object):
     inv
     __len__
     __getitem__
+    random
     """
     def __init__(self, quat, normalized=False, copy=True):
         self._single = False
