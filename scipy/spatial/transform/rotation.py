@@ -2,6 +2,7 @@ from __future__ import division, print_function, absolute_import
 
 import numpy as np
 import scipy.linalg
+from scipy.stats import special_ortho_group
 import re
 import warnings
 
@@ -860,3 +861,41 @@ class Rotation(object):
         """
         # __init__ now copies by default
         return self.__class__(self._quat[indexer], normalized=True)
+
+    @classmethod
+    def random(cls, num=None, state=None):
+        """Generate rotations uniformly distributed in 3D space.
+
+        Drawn random samples from the Haar distribution, the only uniform
+        distribution on the Special Orthogonal Group SO(3) [1]_.
+
+        Parameters
+        ----------
+        num : None or int
+            Number of random rotations to generate. If `None`, then a single
+            rotation is generated. Default is `None`.
+        state : None or `numpy.random.RandomState` object
+            Object for manually setting the generator state.
+
+        Returns
+        -------
+        output : `Rotation` instance
+            Contains a single rotation if `num` is `None`. Otherwise contains a
+            stack of `num` rotations.
+
+        References
+        ----------
+        .. [1] `Random Orthogonal Matrices
+                <http://en.wikipedia.org/wiki/Orthogonal_matrix#Randomization>`
+        """
+        if num is None:
+            size = 1
+        else:
+            size = num
+
+        sample = special_ortho_group.rvs(dim=3, size=size, random_state=state)
+
+        if num == 1:
+            sample = sample[None, :, :]
+
+        return Rotation.from_dcm(sample)
