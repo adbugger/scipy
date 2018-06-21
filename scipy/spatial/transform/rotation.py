@@ -196,18 +196,18 @@ class Rotation(object):
 
     Methods
     -------
+    __len__
     from_quaternion
-    as_quaternion
     from_dcm
-    as_dcm
     from_rotvec
-    as_rotvec
     from_euler
+    as_quaternion
+    as_dcm
+    as_rotvec
     as_euler
     apply
     __mul__
     inv
-    __len__
     __getitem__
     """
     def __init__(self, quat, normalized=False, copy=True):
@@ -431,7 +431,7 @@ class Rotation(object):
         """Initialize class from rotation vector.
 
         A rotation vector is a 3 dimensional vector which is co-directional to
-        the axis of rotaion and whose norm gives the angle of rotation (in
+        the axis of rotation and whose norm gives the angle of rotation (in
         radians).
 
         Parameters
