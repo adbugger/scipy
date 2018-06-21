@@ -1,9 +1,9 @@
 from __future__ import division, print_function, absolute_import
 
-import numpy as np
-import scipy.linalg
 import re
 import warnings
+import numpy as np
+import scipy.linalg
 
 
 AXIS_TO_IND = {'x': 0, 'y': 1, 'z': 2}
@@ -146,16 +146,13 @@ def _make_elementary_quat(axis, angles):
 
 def _compose_quat(p, q):
     product = np.empty((max(p.shape[0], q.shape[0]), 4))
-    # Scalar part of result
     product[:, 3] = p[:, 3] * q[:, 3] - np.sum(p[:, :3] * q[:, :3], axis=1)
-    # Vector part of result
     product[:, :3] = (p[:, None, 3] * q[:, :3] + q[:, None, 3] * p[:, :3] +
                       np.cross(p[:, :3], q[:, :3]))
     return product
 
 
 def _elementary_quat_compose(seq, angles, intrinsic=False):
-    # Initialize result to first axis
     result = _make_elementary_quat(seq[0], angles[:, 0])
 
     for idx, axis in enumerate(seq[1:], start=1):
@@ -212,7 +209,6 @@ class Rotation(object):
     """
     def __init__(self, quat, normalized=False, copy=True):
         self._single = False
-        # Try to convert to numpy array
         quat = np.asarray(quat, dtype=float)
 
         if quat.ndim not in [1, 2] or quat.shape[-1] != 4:
@@ -230,16 +226,13 @@ class Rotation(object):
             self._quat = quat.copy() if copy else quat
         else:
             self._quat = quat.copy()
-            # L2 norm of each row
             norms = scipy.linalg.norm(quat, axis=1)
 
-            # Raise ValueError for zero (eps?) norm quaternions
             zero_norms = norms == 0
             if zero_norms.any():
                 raise ValueError("Found zero norm quaternions in `quat`.")
 
-            # Normalize each quaternion, ensuring norm is broadcasted along
-            # each column.
+            # Ensure norm is broadcasted along each column.
             self._quat[~zero_norms] /= norms[~zero_norms][:, None]
 
     def __len__(self):
@@ -467,7 +460,6 @@ class Rotation(object):
         large_angle = ~small_angle
 
         scale = np.empty(num_rotations)
-        # Use the Taylor expansion of sin(x/2) / x for small angles
         scale[small_angle] = (0.5 - norms[small_angle] ** 2 / 48 +
                               norms[small_angle] ** 4 / 3840)
         scale[large_angle] = (np.sin(norms[large_angle] / 2) /
@@ -505,7 +497,6 @@ class Rotation(object):
 
         num_rotations = quat.shape[0]
         scale = np.empty(num_rotations)
-        # Use the Taylor expansion of x / sin(x/2) for small angles
         scale[small_angle] = (2 + angle[small_angle] ** 2 / 12 +
                               7 * angle[small_angle] ** 4 / 2880)
         scale[large_angle] = (angle[large_angle] /
@@ -858,5 +849,4 @@ class Rotation(object):
                 - a stack of rotation(s), if `indexer` is a slice, or and index
                   array.
         """
-        # __init__ now copies by default
         return self.__class__(self._quat[indexer], normalized=True)
