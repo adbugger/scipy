@@ -781,8 +781,8 @@ def test_quat_ownership():
 
 
 def test_random_rotation_shape():
-    assert_equal(Rotation.random().as_dcm().shape, (3, 3))
-    assert_equal(Rotation.random(None).as_dcm().shape, (3, 3))
+    assert_equal(Rotation.random().as_quat().shape, (4,))
+    assert_equal(Rotation.random(None).as_quat().shape, (4,))
 
-    assert_equal(Rotation.random(1).as_dcm().shape, (1, 3, 3))
-    assert_equal(Rotation.random(5).as_dcm().shape, (5, 3, 3))
+    assert_equal(Rotation.random(1).as_quat().shape, (1, 4))
+    assert_equal(Rotation.random(5).as_quat().shape, (5, 4))

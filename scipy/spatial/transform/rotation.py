@@ -879,9 +879,6 @@ class Rotation(object):
     def random(cls, num=None, state=None):
         """Generate rotations uniformly distributed in 3D space.
 
-        Drawn random samples from the Haar distribution, the only uniform
-        distribution on the Special Orthogonal Group SO(3) [1]_.
-
         Parameters
         ----------
         num : None or int
@@ -892,23 +889,16 @@ class Rotation(object):
 
         Returns
         -------
-        output : `Rotation` instance
+        rotation : `Rotation` instance
             Contains a single rotation if `num` is `None`. Otherwise contains a
             stack of `num` rotations.
-
-        References
-        ----------
-        .. [1] `Random Orthogonal Matrices
-                <http://en.wikipedia.org/wiki/Orthogonal_matrix#Randomization>`
         """
+        if state is not None:
+            np.random.set_state(state)
+        size = 1 if num is None else num
+        sample = np.random.normal(size=(size, 4))
+
         if num is None:
-            size = 1
-        else:
-            size = num
+            sample = sample[0]
 
-        sample = special_ortho_group.rvs(dim=3, size=size, random_state=state)
-
-        if num == 1:
-            sample = sample[None, :, :]
-
-        return Rotation.from_dcm(sample)
+        return Rotation.from_quat(sample)
