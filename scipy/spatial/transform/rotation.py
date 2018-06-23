@@ -876,29 +876,28 @@ class Rotation(object):
         return self.__class__(self._quat[indexer], normalized=True)
 
     @classmethod
-    def random(cls, num=None, state=None):
-        """Generate rotations uniformly distributed in 3D space.
+    def random(cls, num=None, random_state=None):
+        """Generate uniformly distributed rotations.
 
         Parameters
         ----------
         num : None or int
-            Number of random rotations to generate. If `None`, then a single
-            rotation is generated. Default is `None`.
-        state : None or `numpy.random.RandomState` object
+            Number of random rotations to generate. If None, then a single
+            rotation is generated. Default is None.
+        random_state : None or `numpy.random.RandomState` object
             Object for manually setting the generator state.
 
         Returns
         -------
         rotation : `Rotation` instance
-            Contains a single rotation if `num` is `None`. Otherwise contains a
+            Contains a single rotation if `num` is None. Otherwise contains a
             stack of `num` rotations.
         """
-        if state is not None:
-            np.random.set_state(state)
-        size = 1 if num is None else num
-        sample = np.random.normal(size=(size, 4))
-
+        if random_state is not None:
+            np.random.set_state(random_state)
         if num is None:
-            sample = sample[0]
+            sample = np.random.normal(size=4)
+        else:
+            sample = np.random.normal(size=(num, 4))
 
         return Rotation.from_quat(sample)
