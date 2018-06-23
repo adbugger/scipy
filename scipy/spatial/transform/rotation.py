@@ -188,6 +188,7 @@ class Rotation(object):
         - Rotation Composition
         - Rotation Inversion
         - Rotation Indexing
+        - Random sampling
 
     Indexing within a rotation is supported since multiple rotation transforms
     can be stored within a single `Rotation` instance.
@@ -210,6 +211,7 @@ class Rotation(object):
     __mul__
     inv
     __getitem__
+    random
     """
     def __init__(self, quat, normalized=False, copy=True):
         self._single = False
@@ -866,3 +868,33 @@ class Rotation(object):
                   array.
         """
         return self.__class__(self._quat[indexer], normalized=True)
+
+    @classmethod
+    def random(cls, num=None, random_state=None):
+        """Generate uniformly distributed rotations.
+
+        Parameters
+        ----------
+        num : None or int
+            Number of random rotations to generate. If None, then a single
+            rotation is generated. Default is None.
+        random_state : None or `numpy.random.RandomState` object
+            Object for manually setting the generator state.
+
+        Returns
+        -------
+        rotation : `Rotation` instance
+            Contains a single rotation if `num` is None. Otherwise contains a
+            stack of `num` rotations.
+        """
+        if random_state is None:
+            random_state = np.random.RandomState(seed=None)
+        if not isinstance(random_state, np.random.RandomState):
+            raise ValueError("Expected None or numpy.random.RandomState"
+                             "instance, got %r.".format(random_state))
+        if num is None:
+            sample = random_state.normal(size=4)
+        else:
+            sample = random_state.normal(size=(num, 4))
+
+        return Rotation.from_quat(sample)

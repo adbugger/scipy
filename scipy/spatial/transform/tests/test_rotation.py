@@ -778,3 +778,11 @@ def test_quat_ownership():
 
     r._quat[0] = np.array([0, -1, 0, 0])
     assert_allclose(s._quat[0], np.array([1, 0, 0, 0]))
+
+
+def test_random_rotation_shape():
+    assert_equal(Rotation.random().as_quat().shape, (4,))
+    assert_equal(Rotation.random(None).as_quat().shape, (4,))
+
+    assert_equal(Rotation.random(1).as_quat().shape, (1, 4))
+    assert_equal(Rotation.random(5).as_quat().shape, (5, 4))
