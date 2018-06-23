@@ -783,15 +783,15 @@ def test_quat_ownership():
 def test_slerp():
     np.random.seed(0)
 
-    key_rots = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
-    key_quats = key_rots.as_quaternion()
+    key_rots = Rotation.from_quat(np.random.uniform(size=(5, 4)))
+    key_quats = key_rots.as_quat()
 
     key_times = [0, 1, 2, 3, 4]
     interpolator = Slerp(key_times, key_rots)
 
     times = [0, 0.5, 0.25, 1, 1.5, 2, 2.75, 3, 3.25, 3.60, 4]
     interp_rots = interpolator(times)
-    interp_quats = interp_rots.as_quaternion()
+    interp_quats = interp_rots.as_quat()
 
     # Dot products are affected by sign of quaternions
     interp_quats[interp_quats[:, -1] < 0] *= -1
@@ -826,7 +826,7 @@ def test_slerp():
 
 def test_slerp_single_rot():
     with pytest.raises(ValueError, match="at least 2 rotations"):
-        r = Rotation.from_quaternion([1, 2, 3, 4])
+        r = Rotation.from_quat([1, 2, 3, 4])
         Slerp([1], r)
 
 
@@ -834,7 +834,7 @@ def test_slerp_time_dim_mismatch():
     with pytest.raises(ValueError,
                        match="times to be specified in a 1 dimensional array"):
         np.random.seed(0)
-        r = Rotation.from_quaternion(np.random.uniform(size=(2, 4)))
+        r = Rotation.from_quat(np.random.uniform(size=(2, 4)))
         t = np.array([[1],
                       [2]])
         Slerp(t, r)
@@ -844,7 +844,7 @@ def test_slerp_num_rotations_mismatch():
     with pytest.raises(ValueError, match="number of rotations to be equal to "
                                          "number of timestamps"):
         np.random.seed(0)
-        r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+        r = Rotation.from_quat(np.random.uniform(size=(5, 4)))
         t = np.arange(7)
         Slerp(t, r)
 
@@ -852,7 +852,7 @@ def test_slerp_num_rotations_mismatch():
 def test_slerp_equal_times():
     with pytest.raises(ValueError, match="strictly increasing order"):
         np.random.seed(0)
-        r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+        r = Rotation.from_quat(np.random.uniform(size=(5, 4)))
         t = [0, 1, 2, 2, 4]
         Slerp(t, r)
 
@@ -860,14 +860,14 @@ def test_slerp_equal_times():
 def test_slerp_decreasing_times():
     with pytest.raises(ValueError, match="strictly increasing order"):
         np.random.seed(0)
-        r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+        r = Rotation.from_quat(np.random.uniform(size=(5, 4)))
         t = [0, 1, 3, 2, 4]
         Slerp(t, r)
 
 
 def test_slerp_call_time_dim_mismatch():
     np.random.seed(0)
-    r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+    r = Rotation.from_quat(np.random.uniform(size=(5, 4)))
     t = np.arange(5)
     s = Slerp(t, r)
 
@@ -880,7 +880,7 @@ def test_slerp_call_time_dim_mismatch():
 
 def test_slerp_call_time_out_of_range():
     np.random.seed(0)
-    r = Rotation.from_quaternion(np.random.uniform(size=(5, 4)))
+    r = Rotation.from_quat(np.random.uniform(size=(5, 4)))
     t = np.arange(5) + 1
     s = Slerp(t, r)
 
