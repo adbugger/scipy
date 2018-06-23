@@ -893,11 +893,14 @@ class Rotation(object):
             Contains a single rotation if `num` is None. Otherwise contains a
             stack of `num` rotations.
         """
-        if random_state is not None:
-            np.random.set_state(random_state)
+        if random_state is None:
+            random_state = np.random.RandomState(seed=None)
+        if not isinstance(random_state, np.random.RandomState):
+            raise ValueError("Expected None or numpy.random.RandomState"
+                             "instance, got %r.".format(random_state))
         if num is None:
-            sample = np.random.normal(size=4)
+            sample = random_state.normal(size=4)
         else:
-            sample = np.random.normal(size=(num, 4))
+            sample = random_state.normal(size=(num, 4))
 
         return Rotation.from_quat(sample)
