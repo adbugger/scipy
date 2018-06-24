@@ -869,7 +869,7 @@ class Rotation(object):
 
     @classmethod
     def estimate(cls, vectors, transformed_vectors, coeff=None):
-        #TODO: Better description of coeff?
+        # TODO: Better description of coeff?
         """Estimate the rotation that best transforms a set of vectors to
         another.
 
@@ -891,6 +891,7 @@ class Rotation(object):
             `vectors`. Number of values in `coeff` must match number of vectors
             specified in `vectors` and `transformed_vectors`. If None, then all
             values in `coeff` are assumed equal to +1. Default is None.
+
         Returns
         -------
         estimated_rotation : `Rotation` instance
