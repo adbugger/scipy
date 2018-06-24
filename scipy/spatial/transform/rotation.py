@@ -866,3 +866,93 @@ class Rotation(object):
                   array.
         """
         return self.__class__(self._quat[indexer], normalized=True)
+
+    @classmethod
+    def estimate(cls, vectors, transformed_vectors, coeff=None):
+        #TODO: Better description of coeff?
+        """Estimate the rotation that best transforms a set of vectors to
+        another.
+
+        Given `vectors` expressed in an initial frame A, corresponding
+        `transformed_vectors` expressed in frame B, estimate the rotation that
+        transforms frame A to frame B. Also known as Wahba's problem.
+
+        The rotation is estimated using Davenport's q-method [1]_.
+
+        Parameters
+        ----------
+        vectors : array_like, shape (N, 3) or (3,)
+            Vectors expressed in initial frame A.
+        transformed_vectors : array_like, shape (N, 3) or (3,)
+            Result of applying an arbitrary rotation to `vectors`. Shape must
+            match `vectors`.
+        coeff : None or array_like, 1D
+            Coefficients describing the relative importance of the vectors in
+            `vectors`. Number of values in `coeff` must match number of vectors
+            specified in `vectors` and `transformed_vectors`. If None, then all
+            values in `coeff` are assumed equal to +1. Default is None.
+        Returns
+        -------
+        estimated_rotation : `Rotation` instance
+            Contains a single rotation, which is the best estimate of the
+            transform which, when applied on `vectors`, yields
+            `transformed_vectors`.
+
+        References
+        ----------
+        .. [1] F. Landis Markley and Daniele Mortari
+                `Quaternion Attitude Estimation using Vector Observations
+                <https://pdfs.semanticscholar.org/f151/97510b1e501876a6f6d8683ac69ab1ef8d39.pdf>`_
+        """
+        vectors = np.asarray(vectors)
+        if vectors.ndim not in [1, 2] or vectors.shape[-1] != 3:
+            raise ValueError("Expected input `vectors` to have shape (3,) "
+                             "or (N, 3), got {}.".format(vectors.shape))
+        if vectors.shape == (3,):
+            vectors = vectors[None, :]
+
+        outvecs = np.asarray(transformed_vectors)
+        if outvecs.ndim not in [1, 2] or outvecs.shape[-1] != 3:
+            raise ValueError("Expected input `transformed_vectors` to have "
+                             "shape (3,) or (N, 3), "
+                             "got {}".format(outvecs.shape))
+        if outvecs.shape == (3,):
+            outvecs.shape = outvecs[None, :]
+
+        if vectors.shape != outvecs.shape:
+            raise ValueError("Expected inputs `vectors` and "
+                             "`transformed_vectors` to have same shapes, got "
+                             "{} and {} respectively.".format(
+                                vectors.shape, outvecs.shape))
+
+        if coeff is None:
+            coeff = np.ones(vectors.shape[0])
+        else:
+            coeff = np.asarray(coeff)
+            if coeff.ndim != 1:
+                raise ValueError("Expected `coeff` to be 1 dimensional, got "
+                                 "shape {}.".format(coeff.shape))
+            if coeff.shape[0] != vectors.shape[0]:
+                raise ValueError("Expected `coeff` to have number of values "
+                                 "equal to number of input vectors, got "
+                                 "{} values and {} vectors.".format(
+                                    coeff.shape[0], vectors.shape[0]))
+
+        B = np.einsum('ji,jk->ik', coeff[:, None] * outvecs, vectors)
+        S = B + B.T
+        trB = np.trace(B)
+        z = np.array([
+            B[1, 2] - B[2, 1],
+            B[2, 0] - B[0, 2],
+            B[0, 1] - B[1, 0]
+        ])
+        K = np.empty((4, 4))
+        K[0:3, 0:3] = S - np.diag((trB, trB, trB))
+        K[3, 3] = trB
+        K[:-1, 3] = z
+        K[3, :-1] = z
+
+        eigvals, eigvecs = np.linalg.eig(K)
+        qopt = eigvecs[:, np.argmax(eigvals)]
+
+        return cls(qopt, normalized=True)
