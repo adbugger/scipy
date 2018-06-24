@@ -188,6 +188,7 @@ class Rotation(object):
         - Rotation Composition
         - Rotation Inversion
         - Rotation Indexing
+        - Rotation Estimation
 
     Indexing within a rotation is supported since multiple rotation transforms
     can be stored within a single `Rotation` instance.
@@ -210,6 +211,7 @@ class Rotation(object):
     __mul__
     inv
     __getitem__
+    estimate
     """
     def __init__(self, quat, normalized=False, copy=True):
         self._single = False
