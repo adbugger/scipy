@@ -279,7 +279,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Initialize a single rotation:
@@ -354,7 +353,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Initialize a single rotation:
@@ -382,8 +380,8 @@ class Rotation(object):
         >>> r.as_dcm().shape
         (2, 3, 3)
 
-        If input matrices are not special orthogonal, then a special orthogonal
-        estimate is stored:
+        If input matrices are not special orthogonal (orthogonal with
+        determinant equal to +1), then a special orthogonal estimate is stored:
 
         >>> a = np.array([
         ... [0, -0.5, 0],
@@ -399,7 +397,7 @@ class Rotation(object):
         >>> np.linalg.det(dcm)
         1.0000000000000002
 
-        It is also possible to have a stack containng a single rotation:
+        It is also possible to have a stack containing a single rotation:
 
         >>> r = R.from_dcm([[
         ... [0, -1, 0],
@@ -485,7 +483,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Initialize a single rotation:
@@ -604,7 +601,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Initialize a single rotation along a single axis:
@@ -722,7 +718,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Represent a single rotation:
@@ -771,7 +766,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Represent a single rotation:
@@ -864,7 +858,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Represent a single rotation:
@@ -970,7 +963,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Represent a single rotation:
@@ -1065,7 +1057,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Single rotation applied on a single vector:
@@ -1204,7 +1195,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Composition of two single rotations:
@@ -1264,7 +1254,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
 
         Inverting a single rotation:
@@ -1310,7 +1299,6 @@ class Rotation(object):
 
         Examples
         --------
-        >>> import numpy as np
         >>> from scipy.spatial.transform import Rotation as R
         >>> r = R.from_quat([
         ... [1, 1, 0, 0],
