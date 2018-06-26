@@ -210,6 +210,147 @@ class Rotation(object):
     __mul__
     inv
     __getitem__
+
+    Examples
+    --------
+    >>> from scipy.spatial.transform import Rotation as R
+
+    A `Rotation` instance can be initialized in any of the above formats and
+    converted to any of the others. The underlying object is independent of the
+    representation used for initialization.
+
+    Consider a counter-clockwise rotation of 90 degrees about the z-axis. This
+    corresponds to the following quaternion (in scalar-last format):
+
+    >>> r = R.from_quat([0, 0, np.sin(np.pi/4), np.cos(np.pi/4)])
+
+    The rotation can be expressed in any of the other formats:
+
+    >>> r.as_dcm()
+    array([[ 2.22044605e-16, -1.00000000e+00,  0.00000000e+00],
+    [ 1.00000000e+00,  2.22044605e-16,  0.00000000e+00],
+    [ 0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
+    >>> r.as_rotvec()
+    array([0.        , 0.        , 1.57079633])
+    >>> r.as_euler('zyx', degrees=True)
+    array([90.,  0.,  0.])
+
+    The same rotation can be initialized using a direction cosine matrix:
+
+    >>> r = R.from_dcm(np.array([
+    ... [0, -1, 0],
+    ... [1, 0, 0],
+    ... [0, 0, 1]]))
+
+    Representation in other formats:
+
+    >>> r.as_quat()
+    array([0.        , 0.        , 0.70710678, 0.70710678])
+    >>> r.as_rotvec()
+    array([0.        , 0.        , 1.57079633])
+    >>> r.as_euler('zyx', degrees=True)
+    array([90.,  0.,  0.])
+
+    The rotation vector corresponding to this rotation is given by:
+
+    >>> r = R.from_rotvec(np.pi/2 * np.array([0, 0, 1]))
+
+    Representation in other formats:
+
+    >>> r.as_quat()
+    array([0.        , 0.        , 0.70710678, 0.70710678])
+    >>> r.as_dcm()
+    array([[ 2.22044605e-16, -1.00000000e+00,  0.00000000e+00],
+           [ 1.00000000e+00,  2.22044605e-16,  0.00000000e+00],
+           [ 0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
+    >>> r.as_euler('zyx', degrees=True)
+    array([90.,  0.,  0.])
+
+    The `from_euler` function is quite flexible in the range of input formats
+    it supports. Here we initialize a single rotation about a single axis:
+
+    >>> r = R.from_euler('z', 90, degrees=True)
+
+    Again, the object is representation independent and can be converted to any
+    other format:
+
+    >>> r.as_quat()
+    array([0.        , 0.        , 0.70710678, 0.70710678])
+    >>> r.as_dcm()
+    array([[ 2.22044605e-16, -1.00000000e+00,  0.00000000e+00],
+           [ 1.00000000e+00,  2.22044605e-16,  0.00000000e+00],
+           [ 0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
+    >>> r.as_rotvec()
+    array([0.        , 0.        , 1.57079633])
+
+    It is also possible to initialize multiple rotations in a single instance
+    using any of the `from_...` functions. Here we initialize a stack of 3
+    rotations using the `from_euler` function:
+
+    >>> r = R.from_euler('zyx', [
+    ... [90, 0, 0],
+    ... [0, 45, 0],
+    ... [45, 60, 30]], degrees=True)
+
+    The other representations also now return a stack of 3 rotations. For
+    example:
+
+    >>> r.as_quat()
+    array([[0.        , 0.        , 0.70710678, 0.70710678],
+           [0.        , 0.38268343, 0.        , 0.92387953],
+           [0.39190384, 0.36042341, 0.43967974, 0.72331741]])
+
+    Applying the above rotations onto a vector:
+
+    >>> v = [1, 2, 3]
+    >>> r.apply(v)
+    array([[-2.        ,  1.        ,  3.        ],
+           [ 2.82842712,  2.        ,  1.41421356],
+           [ 2.24452282,  0.78093109,  2.89002836]])
+
+    A `Rotation` instance can be indexed and sliced as if it were a single
+    1D array or list:
+
+    >>> r = R.from_euler('zyx', [
+    ... [90, 0, 0],
+    ... [0, 45, 0],
+    ... [45, 60, 30]], degrees=True)
+    >>> r.as_quat()
+    array([[0.        , 0.        , 0.70710678, 0.70710678],
+           [0.        , 0.38268343, 0.        , 0.92387953],
+           [0.39190384, 0.36042341, 0.43967974, 0.72331741]])
+    >>> p = r[0]
+    >>> p.as_dcm()
+    array([[ 2.22044605e-16, -1.00000000e+00,  0.00000000e+00],
+           [ 1.00000000e+00,  2.22044605e-16,  0.00000000e+00],
+           [ 0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
+    >>> q = r[1:3]
+    >>> q.as_quat()
+    array([[0.        , 0.38268343, 0.        , 0.92387953],
+           [0.39190384, 0.36042341, 0.43967974, 0.72331741]])
+
+    Multiple rotations can be composed using the `*` operator:
+
+    >>> r1 = R.from_euler('z', 90, degrees=True)
+    >>> r2 = R.from_rotvec([np.pi/4, 0, 0])
+    >>> v = [1, 2, 3]
+    >>> r2.apply(r1.apply(v))
+    array([-2.        , -1.41421356,  2.82842712])
+    >>> r3 = r2 * r1 # Note the order
+    >>> r3.apply(v)
+    array([-2.        , -1.41421356,  2.82842712])
+
+    Finally, it is also possible to invert rotations:
+
+    >>> r1 = R.from_euler('z', [90, 45], degrees=True)
+    >>> r2 = r.inv()
+    >>> r2.as_euler('zyx', degrees=True)
+    array([[-90.,   0.,   0.],
+           [-45.,   0.,   0.]])
+
+    These examples serve as an overview into the `Rotation` class and highlight
+    major functionalities. For more thorough examples of the range of input and
+    output formats supported, consult the individual method's examples.
     """
     def __init__(self, quat, normalized=False, copy=True):
         self._single = False
