@@ -780,9 +780,9 @@ def test_quat_ownership():
     assert_allclose(s._quat[0], np.array([1, 0, 0, 0]))
 
 
-def test_estimate_no_rotation():
+def test_match_vectors_no_rotation():
     x = np.array([[1, 2, 3], [4, 5, 6]])
     y = x.copy()
 
-    r = Rotation.estimate(x, y)
-    assert_allclose(r.as_dcm(), np.eye(3))
+    r, p = Rotation.match_vectors(x, y)
+    assert_array_almost_equal(r.as_dcm(), np.eye(3))
