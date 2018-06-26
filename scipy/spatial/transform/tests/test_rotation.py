@@ -778,3 +778,11 @@ def test_quat_ownership():
 
     r._quat[0] = np.array([0, -1, 0, 0])
     assert_allclose(s._quat[0], np.array([1, 0, 0, 0]))
+
+
+def test_match_vectors_no_rotation():
+    x = np.array([[1, 2, 3], [4, 5, 6]])
+    y = x.copy()
+
+    r, p = Rotation.match_vectors(x, y)
+    assert_array_almost_equal(r.as_dcm(), np.eye(3))
