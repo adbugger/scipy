@@ -786,3 +786,13 @@ def test_match_vectors_no_rotation():
 
     r, p = Rotation.match_vectors(x, y)
     assert_array_almost_equal(r.as_dcm(), np.eye(3))
+
+
+def test_match_vectors_no_noise():
+    np.random.seed(0)
+    c = Rotation.from_quat(np.random.normal(size=4))
+    b = np.random.normal(size=(5, 3))
+    a = c.apply(b)
+
+    est, cov = Rotation.match_vectors(a, b)
+    assert_allclose(c.as_quat(), est.as_quat())

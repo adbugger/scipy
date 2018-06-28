@@ -870,49 +870,45 @@ class Rotation(object):
         return self.__class__(self._quat[indexer], normalized=True)
 
     @classmethod
-    def match_vectors(cls, vectors, transformed_vectors, weights=None):
-        # TODO: Better description of coeff?
-        """Estimate the rotation that best transforms a set of vectors to
-        another.
+    def match_vectors(cls, a, b, weights=None, normalized=False):
+        """Estimate the rotation to match two sets of vectors.
 
-        Given `vectors` expressed in an initial frame A, corresponding
-        `transformed_vectors` expressed in another frame B, estimate the
-        rotation that best transforms `vectors` to `transformed_vectors`.
-
-        This is also known as Wahba's problem and can be formulated as a
-        minimization problem with the following loss function corresponging to
-        a rotation matrix :math:`A`:
+        Find a rotation between frames A and B which best matches a set of unit
+        vectors `a` and `b` observed in these frames. The following loss
+        function is minimized to solve for the direction cosine matrix
+        :math:`C`:
 
         .. math::
 
-            L(A) = \\frac{1}{2} \\sum_{i = 1}^{n} a_i \\lVert \\mathbf{b}_i -
-            A \\mathbf{r}_i \\rVert^2 ,
+            L(C) = \\frac{1}{2} \\sum_{i = 1}^{n} w_i \\lVert \\mathbf{a}_i -
+            C \\mathbf{b}_i \\rVert^2 ,
 
-        where :math:`a_i`'s are the `weights` corresponding to each vector, and
-        :math:`\\mathbf{b}_i` and :math:`\\mathbf{r}_i` correspond to
-        `transformed_vectors` and `vectors` respectively.
+        where :math:`w_i`'s are the `weights` corresponding to each vector.
 
         The rotation is estimated using Markley's SVD method [1]_.
 
         Parameters
         ----------
-        vectors : array_like, shape (N, 3)
-            Vectors expressed in initial frame A.
-        transformed_vectors : array_like, shape (N, 3)
-            Vectors expressed in another frame B. Result of applying an
-            arbitrary rotation to `vectors`. Shape must match `vectors`.
+        a : array_like, shape (N, 3)
+            Vectors expressed in initial frame A. Result of applying an
+            arbitrary rotation to `b`. Each `a[i]` corresponds to a vector.
+        b : array_like, shape (N, 3)
+            Vectors expressed in another frame B. Shape must match `a`. Each
+            `b[i]` corresponds to a vector.
         weights : None or array_like, 1D
             Coefficients describing the relative importance of the vectors in
-            `vectors`. Number of values in `weights` must match number of
-            vectors specified in `vectors` and `transformed_vectors`. If None,
-            then all values in `weights` are assumed equal to +1.
-            Default is None.
+            `a`. Number of values in `weights` must match number of vectors
+            specified in `a` and `b`. If None, then all values in `weights` are
+            assumed to be equal. Default is None.
+        normalized : boolean, optional
+            If True, assume input vectors `a` and `b` to have unit norm. If
+            False, normalize `a` and `b` before estimating rotation. Default
+            is False.
 
         Returns
         -------
         estimated_rotation : `Rotation` instance
-            Contains a single rotation which is the best estimate of the
-            rotation that transforms `vectors` to `transformed_vectors`.
+            Best estimate of the rotation that transforms `b` to `a`.
         sensitivity_matrix : `numpy.ndarray`, shape (3, 3)
             Scaled covariance matrix of the three component error vector
             between `transformed_vectors` and the result of applying
@@ -925,24 +921,23 @@ class Rotation(object):
                 optimal matrix algorithm,” Journal of Astronautical Sciences,
                 Vol. 41, No.2, 1993, pp. 261-280.
         """
-        vectors = np.asarray(vectors)
+        outvecs = np.asarray(a)
+        if outvecs.ndim != 2 or outvecs.shape[-1] != 3:
+            raise ValueError("Expected input `a` to have shape (N, 3), "
+                             "got {}".format(outvecs.shape))
+        vectors = np.asarray(b)
         if vectors.ndim != 2 or vectors.shape[-1] != 3:
-            raise ValueError("Expected input `vectors` to have shape (N, 3)"
-                             ", got {}.".format(vectors.shape))
+            raise ValueError("Expected input `b` to have shape (N, 3), "
+                             "got {}.".format(vectors.shape))
+
+        if outvecs.shape != vectors.shape:
+            raise ValueError("Expected inputs `a` and `b` to have same shapes"
+                             ", got {} and {} respectively.".format(
+                                outvecs.shape, vectors.shape))
+
         if vectors.shape[0] == 1:
             raise ValueError("Rotation cannot be estimated using a single "
                              "vector.")
-
-        outvecs = np.asarray(transformed_vectors)
-        if outvecs.ndim != 2 or outvecs.shape[-1] != 3:
-            raise ValueError("Expected input `transformed_vectors` to have "
-                             "shape (N, 3), got {}".format(outvecs.shape))
-
-        if vectors.shape != outvecs.shape:
-            raise ValueError("Expected inputs `vectors` and "
-                             "`transformed_vectors` to have same shapes, got "
-                             "{} and {} respectively.".format(
-                                vectors.shape, outvecs.shape))
 
         if weights is None:
             weights = np.ones(vectors.shape[0])
@@ -957,17 +952,22 @@ class Rotation(object):
                                  "{} values and {} vectors.".format(
                                     weights.shape[0], vectors.shape[0]))
 
+        if not normalized:
+            outvecs = outvecs / scipy.linalg.norm(outvecs, axis=1)[:, None]
+            vectors = vectors / scipy.linalg.norm(vectors, axis=1)[:, None]
+
         B = np.einsum('ji,jk->ik', weights[:, None] * outvecs, vectors)
         u, s, vh = np.linalg.svd(B)
-        k = s[0]*s[1] + s[1]*s[2] + s[2]*s[0]
-        psi = (s[0]+s[1]) * (s[1]+s[2]) * (s[2]+s[0])
 
-        p = np.diag((k, k, k)) + np.einsum('ij,kj->ik', B, B)
-        try:
-            p = p / psi
-        except ZeroDivisionError:
+        zeta = (s[0]+s[1]) * (s[1]+s[2]) * (s[2]+s[0])
+        # TODO: Maybe change to close to zero?
+        if zeta == 0:
             raise ValueError("Three component error vector has infinite "
                              "covariance. It is impossible to determine the "
                              "rotation uniquely.")
 
-        return cls.from_dcm(np.einsum('ij,jk->ik', u, vh)), p
+        C = np.dot(u, vh)
+        kappa = s[0]*s[1] + s[1]*s[2] + s[2]*s[0]
+        # TODO: Maybe return full covariance matrix?
+        cov = (kappa * np.eye(3) + np.dot(B, B.T)) / zeta
+        return cls.from_dcm(C), cov
