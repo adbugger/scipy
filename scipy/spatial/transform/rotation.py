@@ -311,10 +311,6 @@ class Rotation(object):
     A `Rotation` instance can be indexed and sliced as if it were a single
     1D array or list:
 
-    >>> r = R.from_euler('zyx', [
-    ... [90, 0, 0],
-    ... [0, 45, 0],
-    ... [45, 60, 30]], degrees=True)
     >>> r.as_quat()
     array([[0.        , 0.        , 0.70710678, 0.70710678],
            [0.        , 0.38268343, 0.        , 0.92387953],
