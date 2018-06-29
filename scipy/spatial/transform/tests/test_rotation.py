@@ -796,3 +796,38 @@ def test_match_vectors_no_noise():
 
     est, cov = Rotation.match_vectors(a, b)
     assert_allclose(c.as_quat(), est.as_quat())
+
+
+def test_match_vectors_noise():
+    np.random.seed(0)
+    n_vectors = 100
+    rot = Rotation.from_euler('xyz', np.random.normal(size=3))
+    vectors = np.random.normal(size=(n_vectors, 3))
+    result = rot.apply(vectors)
+
+    # The paper adds noise as indepedently distributed angular errors
+    xvar = np.pi / 20
+    yvar = np.pi / 200
+    zvar = np.pi / 2000
+
+    noise = Rotation.from_euler(
+        'xyz',
+        np.random.normal(
+            loc=0,
+            scale=(xvar, yvar, zvar),
+            size=(n_vectors, 3)
+        )
+    )
+
+    # Attitude errors must preserve norm. Hence apply individual random
+    # rotations to each vector.
+    noisy_result = noise.apply(result)
+
+    est, cov = Rotation.match_vectors(noisy_result, vectors)
+    error_vector = est.as_euler('xyz') - rot.as_euler('xyz')
+
+    # The diagonal of this matrix is the variance of the angles.
+    # atol must be scalar, hence three checks.
+    assert_allclose(error_vector[0], 0, atol=1.5 * cov[0, 0])
+    assert_allclose(error_vector[1], 0, atol=1.5 * cov[1, 1])
+    assert_allclose(error_vector[2], 0, atol=1.5 * cov[2, 2])
