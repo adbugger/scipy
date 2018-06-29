@@ -898,8 +898,9 @@ class Rotation(object):
         weights : None or array_like, 1D
             Coefficients describing the relative importance of the vectors in
             `a`. Number of values in `weights` must match number of vectors
-            specified in `a` and `b`. If None, then all values in `weights` are
-            assumed to be equal. Default is None.
+            specified in `a` and `b`. `weights` are normalized before matching
+            vectors. If None, then all values in `weights` are assumed to be
+            equal. Default is None.
         normalized : boolean, optional
             If True, assume input vectors `a` and `b` to have unit norm. If
             False, normalize `a` and `b` before estimating rotation. Default
@@ -909,10 +910,9 @@ class Rotation(object):
         -------
         estimated_rotation : `Rotation` instance
             Best estimate of the rotation that transforms `b` to `a`.
-        sensitivity_matrix : `numpy.ndarray`, shape (3, 3)
-            Scaled covariance matrix of the three component error vector
-            between `transformed_vectors` and the result of applying
-            `estimated_rotation` on `vectors`.
+        covariance_matrix : `numpy.ndarray`, shape (3, 3)
+            Covariance matrix of the three component error vector of the Euler
+            angles describing the `estimated_rotation`.
 
         References
         ----------
@@ -951,6 +951,7 @@ class Rotation(object):
                                  "equal to number of input vectors, got "
                                  "{} values and {} vectors.".format(
                                     weights.shape[0], vectors.shape[0]))
+        weights = weights / scipy.linalg.norm(weights)
 
         if not normalized:
             outvecs = outvecs / scipy.linalg.norm(outvecs, axis=1)[:, None]
@@ -968,6 +969,8 @@ class Rotation(object):
 
         C = np.dot(u, vh)
         kappa = s[0]*s[1] + s[1]*s[2] + s[2]*s[0]
-        # TODO: Maybe return full covariance matrix?
+        # For normalized weights with sum(w_i) = 1, the constant factor
+        # lambda_0 * sigma_{tot}^2 equals unity. So we normalize the weights
+        # and return the matrix as is.
         cov = (kappa * np.eye(3) + np.dot(B, B.T)) / zeta
         return cls.from_dcm(C), cov
