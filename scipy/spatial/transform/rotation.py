@@ -174,6 +174,7 @@ def _elementary_quat_compose(seq, angles, intrinsic=False):
 class Rotation(object):
     """Rotation in 3 dimensions.
 
+
     This class provides an interface to initialize from and represent rotations
     with:
 
@@ -1460,3 +1461,87 @@ class Rotation(object):
                [ 0.57735027,  0.57735027, -0.57735027,  0.        ]])
         """
         return self.__class__(self._quat[indexer], normalized=True)
+
+
+class Slerp(object):
+    """Spherical Linear Interpolation of Rotations.
+
+    The interpolation between consecutive rotations is performed as a rotation
+    around a fixed axis with a constant angular velocity [1]_. This ensures
+    that the interpolated rotations follow the shortest path between initial
+    and final orientations.
+
+    Parameters
+    ----------
+    times : array_like, shape (N,)
+        Times of the known rotations. At least 2 times must be specified.
+    rotations : `Rotation` instance
+        Rotations to perform the interpolation between. Must contain N
+        rotations.
+
+    Methods
+    -------
+    __call__
+
+    References
+    ----------
+    .. [1] `Quaternion Slerp
+            <https://en.wikipedia.org/wiki/Slerp#Quaternion_Slerp>`_
+    """
+    def __init__(self, times, rotations):
+        if len(rotations) == 1:
+            raise ValueError("`rotations` must contain at least 2 rotations.")
+
+        times = np.asarray(times)
+        if times.ndim != 1:
+            raise ValueError("Expected times to be specified in a 1 "
+                             "dimensional array, got {} "
+                             "dimensions.".format(times.ndim))
+
+        if times.shape[0] != len(rotations):
+            raise ValueError("Expected number of rotations to be equal to "
+                             "number of timestamps given, got {} rotations "
+                             "and {} timestamps.".format(
+                                len(rotations), times.shape[0]))
+        self.times = times
+        self.timedelta = np.diff(times)
+
+        if np.any(self.timedelta <= 0):
+            raise ValueError("Times must be in strictly increasing order.")
+
+        # inv() and __getitem__ return new objects anyway
+        self.rotations = rotations[:-1]
+        self.rotvecs = (self.rotations.inv() * rotations[1:]).as_rotvec()
+
+    def __call__(self, times):
+        """Compute interpolated rotations at given times.
+
+        Returns a `Rotation` instance with the interpolated rotations.
+
+        Parameters
+        ----------
+        times : array_like, 1D
+            Times to compute the interpolations at.
+        """
+        # Clearly differentiate from self.times property
+        compute_times = np.asarray(times)
+        if compute_times.ndim != 1:
+            raise ValueError("Expected times to be specified in a 1 "
+                             "dimensional array, got {} "
+                             "dimensions.".format(compute_times.ndim))
+
+        # side = 'left' (default) excludes t_min.
+        ind = np.searchsorted(self.times, compute_times) - 1
+        # Include t_min. Without this step, index for t_min equals -1
+        ind[compute_times == self.times[0]] = 0
+        # self.num_rots = number of rotations in self.rots, not number of
+        # rotations in original object
+        if np.any(np.logical_or(ind < 0, ind > len(self.rotations) - 1)):
+            raise ValueError("Interpolation times must be within the range "
+                             "[{}, {}], both inclusive.".format(
+                                self.times[0], self.times[-1]))
+
+        alpha = (compute_times - self.times[ind]) / self.timedelta[ind]
+
+        return (self.rotations[ind] *
+                Rotation.from_rotvec(self.rotvecs[ind] * alpha[:, None]))
