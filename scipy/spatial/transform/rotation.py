@@ -1294,9 +1294,9 @@ class Rotation(object):
                                 n_rotations, n_vectors))
 
         if inverse:
-            result = np.einsum('ikj,ik->ij', dcm, vectors)
+            result = np.einsum('...kj,...k->...j', dcm, vectors)
         else:
-            result = np.einsum('ijk,ik->ij', dcm, vectors)
+            result = np.einsum('...jk,...k->...j', dcm, vectors)
 
         if self._single and single_vector:
             return result[0]
